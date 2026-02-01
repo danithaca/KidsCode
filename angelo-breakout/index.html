@@ -37,6 +37,8 @@
             border-radius: 8px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
             background: #1a1a2e;
+            touch-action: none;
+            user-select: none;
         }
 
         #gameInfo {
@@ -74,6 +76,31 @@
         .btn:active {
             transform: scale(0.95);
         }
+
+        @media (max-width: 850px) {
+            h1 {
+                font-size: 32px;
+                margin-bottom: 10px;
+            }
+
+            #gameCanvas {
+                width: 100%;
+                max-width: 800px;
+                height: auto;
+            }
+
+            #gameInfo {
+                width: 100%;
+                max-width: 800px;
+                padding: 0 20px;
+                font-size: 18px;
+            }
+
+            #controls {
+                font-size: 14px;
+                padding: 0 10px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -86,7 +113,8 @@
             <div>Level: <span id="level">1</span></div>
         </div>
         <div id="controls">
-            Use Arrow Keys or Mouse to move paddle | Press SPACE to start/pause
+            Desktop: Arrow Keys or Mouse to move paddle | Press SPACE to start/pause<br>
+            Mobile: Tap to start | Swipe to move paddle
         </div>
     </div>
 
@@ -418,6 +446,35 @@
             const rect = canvas.getBoundingClientRect();
             const mouseX = e.clientX - rect.left;
             paddle.x = mouseX - paddle.width / 2;
+
+            if (paddle.x < 0) {
+                paddle.x = 0;
+            }
+            if (paddle.x + paddle.width > canvas.width) {
+                paddle.x = canvas.width - paddle.width;
+            }
+        });
+
+        // Touch event for starting the game
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+
+            if (gameState.gameOver) {
+                resetGame();
+            } else if (gameState.won) {
+                nextLevel();
+                gameState.isPlaying = true;
+            } else if (!gameState.isPlaying) {
+                gameState.isPlaying = true;
+            }
+        });
+
+        // Touch event for moving the paddle
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const touchX = e.touches[0].clientX - rect.left;
+            paddle.x = touchX - paddle.width / 2;
 
             if (paddle.x < 0) {
                 paddle.x = 0;
