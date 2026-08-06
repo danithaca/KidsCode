@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dead Rhythm Party</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#000;overflow:hidden;}
+canvas{display:block;}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const C=document.getElementById('c');
+const cx=C.getContext('2d');
+function W(){return C.width;} function H(){return C.height;}
+C.width=window.innerWidth; C.height=window.innerHeight;
+window.onresize=function(){C.width=window.innerWidth;C.height=window.innerHeight;};
+
+// ── Audio (Web Audio API, original procedural music) ──────────────
+var audio=null, beatCount=0, nextBeat=0;
+var BPM=130, BEAT=60/BPM;
+var beatFlash=0, beatTime=0;
+
+function initAudio(){
+  audio=new(window.AudioContext||window.webkitAudioContext)();
+  nextBeat=audio.currentTime+0.1;
+  scheduleBeat();
+}
+
+function note(freq,t,dur,vol,type){
+  var o=audio.createOscillator(),g=audio.createGain();
+  o.type=type||'sine'; o.frequency.setValueAtTime(freq,t);
+  o.connect(g); g.connect(audio.destination);
+  g.gain.setValueAtTime(vol||0.2,t);
+  g.gain.exponentialRampToValueAtTime(0.001,t+dur);
+  o.start(t); o.stop(t+dur);
+}
+
+function noise(t,dur,vol,hpFreq){
+  var buf=audio.createBuffer(1,audio.sampleRate*dur,audio.sampleRate);
+  var d=buf.getChannelData(0);
+  for(var i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.exp(-i/(audio.sampleRate*dur*0.4));
+  var src=audio.createBufferSource(),flt=audio.createBiquadFilter(),g=audio.createGain();
+  flt.type='highpass'; flt.frequency.value=hpFreq||200;
+  src.buffer=buf; src.connect(flt); flt.connect(g); g.connect(audio.destination);
+  g.gain.setValueAtTime(vol||0.3,t); src.start(t); src.stop(t+dur);
+}
+
+// Spooky bass line (original minor key melody, 8-step loop)
+var BASS=[65,65,78,65,58,65,55,58]; // C2 pattern (Hz approx)
+var MELODY_HI=[262,0,330,0,262,220,0,196]; // high synth stab
+
+function scheduleBeat(){
+  while(nextBeat<audio.currentTime+0.5){
+    var t=nextBeat;
+    var step=beatCount%8;
+    var half=beatCount%2;
+    // Kick on 1,3
+    if(beatCount%4===0){
+      var ko=audio.createOscillator(),kg=audio.createGain();
+      ko.type='sine'; ko.frequency.setValueAtTime(130,t); ko.frequency.exponentialRampToValueAtTime(0.001,t+0.45);
+      ko.connect(kg); kg.connect(audio.destination);
+      kg.gain.setValueAtTime(0.9,t); kg.gain.exponentialRampToValueAtTime(0.001,t+0.45);
+      ko.start(t); ko.stop(t+0.45);
+    }
+    // Snare on 2,4
+    if(beatCount%4===2) noise(t,0.18,0.35,2000);
+    // Hi-hat every beat
+    noise(t,half===0?0.05:0.025,0.18,9000);
+    // Bass synth every 2 beats
+    if(half===0) note(BASS[step],t,BEAT*1.8,0.18,'square');
+    // Spooky hi synth stabs
+    if(MELODY_HI[step]>0) note(MELODY_HI[step],t,BEAT*0.4,0.07,'triangle');
+    // Open hi-hat on offbeats
+    if(half===1) noise(t,0.08,0.12,10000);
+
+    beatFlash=1.0; beatTime=performance.now();
+    nextBeat+=BEAT/2;
+    beatCount++;
+  }
+  setTimeout(scheduleBeat,25);
+}
+
+function sfxJump(){
+  if(!audio) return;
+  note(350,audio.currentTime,0.12,0.14,'square');
+  note(550,audio.currentTime+0.06,0.1,0.1,'square');
+}
+function sfxLum(){
+  if(!audio) return;
+  note(660,audio.currentTime,0.08,0.15,'triangle');
+  note(880,audio.currentTime+0.05,0.08,0.12,'triangle');
+}
+function sfxDie(){
+  if(!audio) return;
+  var o=audio.createOscillator(),g=audio.createGain();
+  o.type='sawtooth'; o.frequency.setValueAtTime(300,audio.currentTime);
+  o.frequency.exponentialRampToValueAtTime(40,audio.currentTime+0.6);
+  o.connect(g); g.connect(audio.destination);
+  g.gain.setValueAtTime(0.3,audio.currentTime); g.gain.exponentialRampToValueAtTime(0.001,audio.currentTime+0.6);
+  o.start(audio.currentTime); o.stop(audio.currentTime+0.6);
+}
+
+// ── Level design ──────────────────────────────────────────────────
+// Ground segments: [startX, width]. Gaps = space between segments.
+// All in absolute world coords. Player/camera scroll left→right.
+var GROUND=[];  // {x,w}
+var ENEMIES=[];  // {x,y,w,h,type,frame,ft,baseY}
+var LUMS=[];     // {x,y,got,ph}
+var LEVEL_END=0;
+
+var GY=function(){return H()*0.72;};
+
+function buildLevel(){
+  GROUND=[]; ENEMIES=[]; LUMS=[];
+  var g=GY();
+
+  // Helper: add ground segment
+  function G(x,w){ GROUND.push({x:x,w:w}); }
+  // Helper: zombie on current ground
+  function Z(x){ ENEMIES.push({x:x,y:0,w:38,h:60,type:'zombie',frame:0,ft:0,baseY:0}); }
+  // Helper: bat
+  function B(x,yo){ ENEMIES.push({x:x,y:0,w:60,h:28,type:'bat',frame:0,ft:0,baseY:g+(yo||-130)}); }
+  // Helper: lum row
+  function L(x,n,sp){ for(var i=0;i<n;i++) LUMS.push({x:x+i*(sp||70),y:g-90,got:false,ph:i*0.5}); }
+
+  // Build the level
+  G(  -300, 700);   L(200,4,65);
+  G(   450, 240);   Z(520);
+  G(   740, 180);   L(760,3,60);
+  // gap ~120
+  G(   960, 200);   B(1020,-130);
+  G(  1210, 160);
+  // gap ~100
+  G(  1410, 300);   Z(1450); Z(1620);  L(1480,4,60);
+  G(  1760, 200);   B(1800,-100); B(1900,-150);
+  // gap ~150
+  G(  2010, 180);
+  // gap ~80
+  G(  2230, 350);   Z(2280); L(2310,5,65);
+  G(  2630, 160);   B(2680,-120);
+  // gap ~130
+  G(  2840, 200);   Z(2880); B(2980,-90);
+  // gap ~100
+  G(  3080, 100);
+  // gap ~100
+  G(  3220, 100);
+  // gap ~100
+  G(  3360, 300);   Z(3380); Z(3500); L(3400,3,75);
+  G(  3710, 200);   B(3740,-140); B(3850,-80);
+  // gap ~160
+  G(  4010, 180);
+  // gap ~90
+  G(  4240, 350);   Z(4260); Z(4420); B(4350,-110); L(4280,4,65);
+  // gap ~120
+  G(  4710, 160);
+  // gap ~80
+  G(  4930, 120);
+  // gap ~80
+  G(  5090, 120);
+  // gap ~80
+  G(  5260, 600);   Z(5280); Z(5440); Z(5600); B(5360,-120); B(5500,-90); L(5300,8,65);
+  G(  5920, 200);   B(5950,-130); B(6050,-80);
+  // gap ~150
+  G(  6220, 200);   Z(6250); B(6350,-100);
+  // gap ~200
+  G(  6570, 180);
+  // gap ~100
+  G(  6800, 100);
+  // gap ~100
+  G(  6940, 100);
+  // gap ~100
+  G(  7080, 120);
+  // gap ~100
+  G(  7240, 800);   L(7260,10,65); // final stretch — lots of lums
+  LEVEL_END=8100;
+
+  // Set y positions for enemies
+  for(var i=0;i<ENEMIES.length;i++){
+    var e=ENEMIES[i];
+    if(e.type==='zombie'){ e.y=g-e.h; e.baseY=g-e.h; }
+    else{ e.baseY=e.baseY||g-130; e.y=e.baseY; }
+  }
+}
+
+// ── Player ────────────────────────────────────────────────────────
+var PL={
+  x:150, y:0, vy:0,
+  w:36, h:58,
+  jumps:0, maxJumps:2,
+  alive:true,
+  frame:0, ft:0,
+  get gy(){ return GY()-this.h; }
+};
+
+function playerJump(){
+  if(PL.jumps<PL.maxJumps&&PL.alive){
+    PL.vy=-680; PL.jumps++; sfxJump();
+    spawnParticles(PL.x-camX,PL.y+PL.h,'#aaffaa',5);
+  }
+}
+
+// ── State ─────────────────────────────────────────────────────────
+var state='title';
+var camX=0, lumCount=0, totalTime=0, deathT=0, winT=0;
+var particles=[];
+
+function startGame(){
+  if(!audio) initAudio();
+  resetGame();
+}
+function resetGame(){
+  camX=0; lumCount=0; deathT=0; winT=0; particles=[];
+  PL.x=150; PL.vy=0; PL.jumps=0; PL.alive=true; PL.frame=0;
+  buildLevel();
+  PL.y=PL.gy;
+  state='playing';
+}
+
+// ── Input ─────────────────────────────────────────────────────────
+var pressed={};
+document.addEventListener('keydown',function(e){
+  if(pressed[e.code]) return;
+  pressed[e.code]=true;
+  if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();}
+  if(state==='title'){startGame();return;}
+  if(state==='dead'||state==='win'){resetGame();return;}
+  if(e.code==='Space'||e.code==='ArrowUp') playerJump();
+});
+document.addEventListener('keyup',function(e){pressed[e.code]=false;});
+document.addEventListener('pointerdown',function(){
+  if(state==='title'){startGame();return;}
+  if(state==='dead'||state==='win'){resetGame();return;}
+  playerJump();
+});
+
+// ── Particles ─────────────────────────────────────────────────────
+function spawnParticles(x,y,col,n){
+  for(var i=0;i<n;i++){
+    var a=Math.random()*Math.PI*2, sp=60+Math.random()*180;
+    particles.push({x:x,y:y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-80,life:1,col:col,r:3+Math.random()*5});
+  }
+}
+
+// ── Ground check ─────────────────────────────────────────────────
+function onGround(wx){
+  for(var i=0;i<GROUND.length;i++){
+    var g=GROUND[i];
+    if(wx>g.x&&wx<g.x+g.w) return true;
+  }
+  return false;
+}
+
+// ── Update ────────────────────────────────────────────────────────
+var RUN_SPEED=290;
+var lastT=0;
+
+function update(dt){
+  totalTime+=dt;
+  beatFlash=Math.max(0,beatFlash-dt*7);
+
+  if(state!=='playing') return;
+
+  // Camera / player run
+  camX+=RUN_SPEED*dt;
+  PL.x=camX+150; // fixed screen x
+
+  // Gravity
+  PL.vy+=1900*dt;
+  PL.y+=PL.vy*dt;
+
+  // Ground collision
+  if(onGround(PL.x)){
+    if(PL.y>=PL.gy){
+      PL.y=PL.gy; PL.vy=0; PL.jumps=0;
+    }
+  }
+
+  // Fall into gap = die
+  if(PL.y>H()+80) killPlayer();
+
+  // Win
+  if(camX>LEVEL_END-150&&PL.alive){ state='win'; winT=0; }
+
+  // Animation
+  PL.ft+=dt;
+  if(PL.ft>0.07){PL.ft=0;PL.frame=(PL.frame+1)%8;}
+
+  // Obstacles
+  for(var i=0;i<ENEMIES.length;i++){
+    var e=ENEMIES[i];
+    e.ft+=dt;
+    if(e.ft>0.07){e.ft=0;e.frame++;}
+    if(e.type==='bat') e.y=e.baseY+Math.sin(totalTime*3+i)*28;
+
+    // Collision with player
+    if(!PL.alive) continue;
+    var ex=e.x-camX;
+    var ey=e.y;
+    var pw=PL.x-camX, py=PL.y;
+    if(Math.abs(pw-ex)<(PL.w/2+e.w/2)-6 && Math.abs((py+PL.h/2)-(ey+e.h/2))<(PL.h/2+e.h/2)-8){
+      killPlayer();
+    }
+  }
+
+  // Lums
+  for(var j=0;j<LUMS.length;j++){
+    var lum=LUMS[j];
+    if(lum.got) continue;
+    var lsx=lum.x-camX;
+    var lsy=lum.y;
+    if(Math.abs(PL.x-camX-lsx)<32&&Math.abs(PL.y+PL.h/2-lsy)<32){
+      lum.got=true; lumCount++; sfxLum();
+      spawnParticles(lsx,lsy,'#ffee00',8);
+    }
+  }
+
+  // Particles
+  for(var k=particles.length-1;k>=0;k--){
+    var p=particles[k];
+    p.x+=p.vx*dt; p.y+=p.vy*dt;
+    p.vy+=600*dt; p.life-=dt*2;
+    if(p.life<=0) particles.splice(k,1);
+  }
+
+  if(state==='dead') deathT+=dt;
+  if(state==='win') winT+=dt;
+}
+
+function killPlayer(){
+  if(!PL.alive) return;
+  PL.alive=false; state='dead'; sfxDie();
+  spawnParticles(PL.x-camX,PL.y+PL.h/2,'#ff4400',25);
+}
+
+// ── Drawing ───────────────────────────────────────────────────────
+function drawBg(){
+  var w=W(),h=H(),g=GY();
+  // Sky
+  var sky=cx.createLinearGradient(0,0,0,g);
+  sky.addColorStop(0,'#04000c'); sky.addColorStop(1,'#14003a');
+  cx.fillStyle=sky; cx.fillRect(0,0,w,h);
+
+  // Stars
+  cx.fillStyle='#fff';
+  for(var i=0;i<80;i++){
+    var sx=((i*139.7+camX*0.03)%(w+20)+w+20)%(w+20)-10;
+    var sy=(i*71.3)%(h*0.55);
+    var sa=0.3+0.7*Math.abs(Math.sin(totalTime*1.5+i*0.8));
+    cx.globalAlpha=sa*0.9;
+    cx.fillRect(sx,sy,i%5===0?2:1,i%5===0?2:1);
+  }
+  cx.globalAlpha=1;
+
+  // Moon
+  var mp=beatFlash*12;
+  cx.shadowColor='#ffffaa'; cx.shadowBlur=25+mp;
+  cx.fillStyle='#ffffcc';
+  cx.beginPath(); cx.arc(w*0.82,h*0.1,38+mp*0.3,0,Math.PI*2); cx.fill();
+  // Moon craters
+  cx.fillStyle='#eeeeaa';
+  cx.beginPath(); cx.arc(w*0.82-10,h*0.1+8,8,0,Math.PI*2); cx.fill();
+  cx.beginPath(); cx.arc(w*0.82+12,h*0.1-6,5,0,Math.PI*2); cx.fill();
+  cx.shadowBlur=0;
+
+  // Far tombstones (slowest parallax)
+  cx.fillStyle='#2a003a';
+  for(var ti=0;ti<14;ti++){
+    var tx=((ti*210-camX*0.12)%(w+240)+w+240)%(w+240)-120;
+    var ty=g-8; var th=42+(ti%4)*18;
+    cx.fillRect(tx-13,ty-th,26,th);
+    // arch top
+    cx.beginPath(); cx.arc(tx,ty-th,13,Math.PI,0); cx.fill();
+    // cross
+    cx.fillRect(tx-2,ty-th-22,4,18); cx.fillRect(tx-9,ty-th-16,18,4);
+  }
+
+  // Mid tombstones
+  cx.fillStyle='#3a0050';
+  for(var mi=0;mi<9;mi++){
+    var mx=((mi*280+40-camX*0.28)%(w+320)+w+320)%(w+320)-120;
+    var my=g-5; var mh=55+(mi%3)*22;
+    cx.fillRect(mx-16,my-mh,32,mh);
+    cx.beginPath(); cx.arc(mx,my-mh,16,Math.PI,0); cx.fill();
+    cx.fillRect(mx-3,my-mh-28,6,24); cx.fillRect(mx-12,my-mh-20,24,5);
+  }
+
+  // Ground
+  var gg=cx.createLinearGradient(0,g,0,h);
+  gg.addColorStop(0,'#1f3d00'); gg.addColorStop(0.15,'#0e1f00'); gg.addColorStop(1,'#030600');
+  cx.fillStyle=gg; cx.fillRect(0,g,w,h-g);
+}
+
+function drawGround(){
+  var g=GY(),w=W(),h=H();
+  for(var i=0;i<GROUND.length;i++){
+    var seg=GROUND[i];
+    var sx=seg.x-camX;
+    if(sx>w+20||sx+seg.w<-20) continue;
+    // Dirt
+    cx.fillStyle='#1f3500'; cx.fillRect(sx,g,seg.w,h-g);
+    // Grass strip
+    cx.fillStyle='#2a7a00'; cx.fillRect(sx,g-5,seg.w,5);
+    // Beat-pulse grass edge
+    if(beatFlash>0.2){
+      cx.fillStyle='rgba(80,255,80,'+(beatFlash*0.35)+')';
+      cx.fillRect(sx,g-5,seg.w,5);
+    }
+    // Grass tufts
+    cx.fillStyle='#3a9900';
+    for(var t=0;t<seg.w;t+=30){
+      cx.fillRect(sx+t,g-8,4,3); cx.fillRect(sx+t+10,g-7,3,2);
+    }
+  }
+}
+
+function drawPlayer(){
+  if(!PL.alive&&deathT>0.15) return;
+  if(!PL.alive&&Math.floor(deathT*12)%2===0) return;
+
+  var sx=PL.x-camX, sy=PL.y;
+  var t=(PL.frame/8);
+  var run=Math.sin(t*Math.PI*2);
+  var onG=PL.y>=PL.gy-2;
+
+  // Beat glow
+  if(beatFlash>0.5){cx.shadowColor='#ffff00';cx.shadowBlur=20;}
+
+  // LEGS (floating, separated from body like Rayman)
+  var legL=onG?run*18:0, legR=onG?-run*18:0;
+  cx.fillStyle='#1a2a88';
+  // Left leg
+  cx.beginPath();
+  cx.roundRect(sx-14+legL*0.4,sy+32,12,22,4);
+  cx.fill();
+  // Right leg
+  cx.beginPath();
+  cx.roundRect(sx+2+legR*0.4,sy+32,12,22,4);
+  cx.fill();
+  // Shoes
+  cx.fillStyle='#ffaa00';
+  cx.fillRect(sx-17+legL*0.4,sy+52,16,8);
+  cx.fillRect(sx-1+legR*0.4,sy+52,16,8);
+
+  // BODY (torso, no neck like Rayman)
+  cx.fillStyle='#dd5500';
+  cx.beginPath(); cx.ellipse(sx,sy+22,17,18,0,0,Math.PI*2); cx.fill();
+  // Shirt detail
+  cx.fillStyle='#ff8800';
+  cx.fillRect(sx-10,sy+14,20,8);
+
+  // HANDS (floating, detached)
+  cx.fillStyle='#ffddaa';
+  var handSwL=onG?Math.sin(t*Math.PI*2+1)*10:0;
+  var handSwR=onG?Math.sin(t*Math.PI*2)*10:0;
+  cx.shadowColor='#ffddaa'; cx.shadowBlur=6;
+  cx.beginPath(); cx.ellipse(sx-26,sy+18+handSwL,8,8,0,0,Math.PI*2); cx.fill();
+  cx.beginPath(); cx.ellipse(sx+26,sy+18+handSwR,8,8,0,0,Math.PI*2); cx.fill();
+  cx.shadowBlur=0;
+
+  // HEAD (floating above body, detached)
+  cx.fillStyle='#ffddaa';
+  cx.beginPath(); cx.ellipse(sx,sy+3,17,17,0,0,Math.PI*2); cx.fill();
+
+  // Hair / helmet (spiky purple)
+  cx.fillStyle='#7722cc';
+  cx.fillRect(sx-17,sy-12,34,14);
+  cx.beginPath(); cx.arc(sx,sy-12,17,Math.PI,0); cx.fill();
+  // Spikes
+  cx.fillStyle='#8833dd';
+  cx.beginPath(); cx.moveTo(sx-12,sy-12); cx.lineTo(sx-8,sy-22); cx.lineTo(sx-4,sy-12); cx.fill();
+  cx.beginPath(); cx.moveTo(sx-2,sy-12); cx.lineTo(sx+2,sy-24); cx.lineTo(sx+6,sy-12); cx.fill();
+  cx.beginPath(); cx.moveTo(sx+8,sy-12); cx.lineTo(sx+12,sy-20); cx.lineTo(sx+16,sy-12); cx.fill();
+
+  // Eyes
+  cx.fillStyle='#fff';
+  cx.beginPath(); cx.ellipse(sx-7,sy+2,5,5,0,0,Math.PI*2); cx.fill();
+  cx.beginPath(); cx.ellipse(sx+7,sy+2,5,5,0,0,Math.PI*2); cx.fill();
+  cx.fillStyle='#1133ff';
+  cx.beginPath(); cx.ellipse(sx-7,sy+3,3,3,0,0,Math.PI*2); cx.fill();
+  cx.beginPath(); cx.ellipse(sx+7,sy+3,3,3,0,0,Math.PI*2); cx.fill();
+  cx.fillStyle='#000';
+  cx.beginPath(); cx.ellipse(sx-6,sy+2,1.5,1.5,0,0,Math.PI*2); cx.fill();
+  cx.beginPath(); cx.ellipse(sx+8,sy+2,1.5,1.5,0,0,Math.PI*2); cx.fill();
+
+  // Scarf
+  cx.fillStyle='#ff2200';
+  cx.fillRect(sx-14,sy+16,28,7);
+  cx.fillRect(sx+6,sy+20,6,16); // dangling end
+
+  cx.shadowBlur=0;
+}
+
+function drawZombie(e){
+  var sx=e.x-camX, sy=e.y;
+  var bob=Math.sin(e.frame*0.45)*4;
+  var lurch=Math.sin(e.frame*0.22)*6;
+  // Body
+  cx.fillStyle='#2d6622'; cx.fillRect(sx-14+lurch,sy+bob+15,28,38);
+  // Torn shirt
+  cx.fillStyle='#224d18'; cx.fillRect(sx-10+lurch,sy+bob+18,20,20);
+  // Head
+  cx.fillStyle='#44aa44';
+  cx.beginPath(); cx.ellipse(sx+lurch,sy+bob,16,16,0.15,0,Math.PI*2); cx.fill();
+  // Rotting face
+  cx.fillStyle='#33882a'; cx.fillRect(sx-8+lurch,sy+bob-4,16,10);
+  // Glowing red eyes
+  cx.fillStyle='#ff2200'; cx.shadowColor='#ff0000'; cx.shadowBlur=8;
+  cx.fillRect(sx-8+lurch,sy+bob-3,6,5); cx.fillRect(sx+2+lurch,sy+bob-3,6,5);
+  cx.shadowBlur=0;
+  // Outstretched arms
+  cx.fillStyle='#2d6622';
+  cx.fillRect(sx-38+lurch,sy+bob+18,26,9); // left arm
+  cx.fillRect(sx+14+lurch,sy+bob+18,26,9); // right arm
+  // Hands (claws)
+  cx.fillStyle='#44aa44';
+  cx.fillRect(sx-42+lurch,sy+bob+15,8,14);
+  cx.fillRect(sx+36+lurch,sy+bob+15,8,14);
+  // Legs
+  var ls=Math.sin(e.frame*0.35)*10;
+  cx.fillStyle='#1a4010';
+  cx.fillRect(sx-13+lurch+ls,sy+bob+52,11,22); cx.fillRect(sx+2+lurch-ls,sy+bob+52,11,22);
+}
+
+function drawBat(e){
+  var sx=e.x-camX, sy=e.y;
+  var flap=Math.sin(e.frame*0.55)*22;
+  // Body
+  cx.fillStyle='#1a0028';
+  cx.beginPath(); cx.ellipse(sx,sy,10,8,0,0,Math.PI*2); cx.fill();
+  // Wings
+  cx.fillStyle='#2a0044';
+  // Left wing
+  cx.beginPath();
+  cx.moveTo(sx-10,sy); cx.quadraticCurveTo(sx-32,sy-flap,sx-46,sy+4);
+  cx.quadraticCurveTo(sx-28,sy+10,sx-10,sy+5); cx.fill();
+  // Right wing
+  cx.beginPath();
+  cx.moveTo(sx+10,sy); cx.quadraticCurveTo(sx+32,sy-flap,sx+46,sy+4);
+  cx.quadraticCurveTo(sx+28,sy+10,sx+10,sy+5); cx.fill();
+  // Eyes
+  cx.fillStyle='#ff4400'; cx.shadowColor='#ff4400'; cx.shadowBlur=6;
+  cx.fillRect(sx-6,sy-3,4,4); cx.fillRect(sx+2,sy-3,4,4);
+  cx.shadowBlur=0;
+  // Fangs
+  cx.fillStyle='#fff'; cx.fillRect(sx-4,sy+6,3,5); cx.fillRect(sx+1,sy+6,3,5);
+}
+
+function drawLums(){
+  for(var i=0;i<LUMS.length;i++){
+    var lum=LUMS[i];
+    if(lum.got) continue;
+    var sx=lum.x-camX;
+    if(sx<-30||sx>W()+30) continue;
+    var bob=Math.sin(totalTime*4+lum.ph)*7;
+    var sy=lum.y+bob;
+    var pulse=0.85+Math.sin(totalTime*6+lum.ph)*0.15;
+    var r=11*pulse;
+    // Outer glow
+    cx.shadowColor='#ffee00'; cx.shadowBlur=16;
+    cx.fillStyle='#ffdd00';
+    cx.beginPath(); cx.arc(sx,sy,r,0,Math.PI*2); cx.fill();
+    cx.shadowBlur=0;
+    // Inner bright
+    cx.fillStyle='#ffffff';
+    cx.beginPath(); cx.arc(sx-3,sy-3,r*0.35,0,Math.PI*2); cx.fill();
+    // Star rays
+    cx.strokeStyle='#ffee00'; cx.lineWidth=2; cx.globalAlpha=0.6;
+    for(var ri=0;ri<4;ri++){
+      var a=ri*Math.PI/2+totalTime*1.5;
+      cx.beginPath(); cx.moveTo(sx+Math.cos(a)*(r+2),sy+Math.sin(a)*(r+2));
+      cx.lineTo(sx+Math.cos(a)*(r+8),sy+Math.sin(a)*(r+8)); cx.stroke();
+    }
+    cx.globalAlpha=1; cx.lineWidth=1;
+  }
+}
+
+function drawParticles(){
+  for(var i=0;i<particles.length;i++){
+    var p=particles[i];
+    cx.globalAlpha=p.life;
+    cx.fillStyle=p.col;
+    cx.shadowColor=p.col; cx.shadowBlur=8;
+    cx.beginPath(); cx.arc(p.x,p.y,p.r*p.life,0,Math.PI*2); cx.fill();
+  }
+  cx.globalAlpha=1; cx.shadowBlur=0;
+}
+
+function drawHUD(){
+  var w=W(),h=H();
+  // Lum count
+  cx.shadowColor='#ffee00'; cx.shadowBlur=10;
+  cx.fillStyle='#ffee00'; cx.font='bold 26px Arial';
+  cx.fillText('⭐ '+lumCount+' / '+LUMS.length,18,42);
+  cx.shadowBlur=0;
+
+  // Progress bar
+  var prog=Math.min(Math.max(camX,0)/LEVEL_END,1);
+  cx.fillStyle='rgba(0,0,0,0.55)'; cx.fillRect(w/2-160,12,320,22);
+  var bg=cx.createLinearGradient(w/2-160,0,w/2+160,0);
+  bg.addColorStop(0,'#8800ff'); bg.addColorStop(1,'#ff00cc');
+  cx.fillStyle=bg; cx.fillRect(w/2-160,12,320*prog,22);
+  cx.strokeStyle='#ffffff33'; cx.lineWidth=1; cx.strokeRect(w/2-160,12,320,22);
+  cx.fillStyle='#fff'; cx.font='11px Arial'; cx.textAlign='center';
+  cx.fillText(Math.round(prog*100)+'%',w/2,27); cx.textAlign='left';
+
+  // Controls
+  cx.fillStyle='rgba(255,255,255,0.45)'; cx.font='13px Arial';
+  cx.fillText('SPACE / CLICK = Jump  (Double Jump!)',14,h-12);
+}
+
+function drawTitle(){
+  drawBg();
+  var w=W(),h=H();
+  var pulse=Math.sin(totalTime*3)*0.08+1;
+  // Shadow text
+  cx.textAlign='center';
+  cx.fillStyle='#4400aa';
+  cx.font='bold '+(w<600?52:80)+'px Arial';
+  cx.fillText('DEAD RHYTHM',w/2+4,h*0.34+4);
+  cx.fillText('PARTY',w/2+4,h*0.46+4);
+  // Main text
+  cx.shadowColor='#ff44ff'; cx.shadowBlur=30+Math.sin(totalTime*4)*10;
+  cx.fillStyle='#ffee00';
+  cx.font='bold '+(w<600?52:80)+'px Arial';
+  cx.fillText('DEAD RHYTHM',w/2,h*0.34);
+  cx.shadowColor='#ff8800'; cx.shadowBlur=20;
+  cx.fillStyle='#ff88ff';
+  cx.font='bold '+(w<600?44:66)+'px Arial';
+  cx.fillText('PARTY',w/2,h*0.46);
+  cx.shadowBlur=0;
+
+  cx.fillStyle='rgba(0,0,0,0.45)';
+  cx.fillRect(w/2-220,h*0.55,440,90);
+  cx.fillStyle='#aaffaa'; cx.font='20px Arial'; cx.shadowColor='#00ff88'; cx.shadowBlur=8;
+  cx.fillText('Click or press SPACE to start!',w/2,h*0.59);
+  cx.shadowBlur=0;
+  cx.fillStyle='#aaaaff'; cx.font='15px Arial';
+  cx.fillText('Collect all the ⭐ Lums — Double Jump to survive!',w/2,h*0.61+22);
+  cx.fillStyle='#ff8888'; cx.font='14px Arial';
+  cx.fillText('Avoid zombies 🧟 and bats 🦇',w/2,h*0.61+44);
+  cx.textAlign='left';
+}
+
+function drawDead(){
+  drawBg(); drawGround();
+  drawLums();
+  for(var i=0;i<ENEMIES.length;i++){
+    var e=ENEMIES[i], sx=e.x-camX;
+    if(sx<-100||sx>W()+100) continue;
+    if(e.type==='zombie') drawZombie(e); else drawBat(e);
+  }
+  drawParticles();
+  cx.fillStyle='rgba(150,0,0,'+Math.min(deathT*0.8,0.65)+')';
+  cx.fillRect(0,0,W(),H());
+  if(deathT>0.4){
+    cx.textAlign='center';
+    cx.fillStyle='#fff'; cx.shadowColor='#ff0000'; cx.shadowBlur=25;
+    cx.font='bold '+(W()<600?52:70)+'px Arial';
+    cx.fillText('YOU DIED',W()/2,H()*0.4);
+    cx.shadowBlur=0;
+    cx.fillStyle='#ffaaaa'; cx.font='22px Arial';
+    cx.fillText('⭐ '+lumCount+' Lums collected',W()/2,H()*0.52);
+    cx.fillStyle='#aaaaaa'; cx.font='18px Arial';
+    cx.fillText('Click or Space to try again',W()/2,H()*0.6);
+    cx.textAlign='left';
+  }
+}
+
+function drawWin(){
+  drawBg(); drawGround(); drawLums(); drawParticles();
+  var pulse=1+Math.sin(winT*4)*0.05;
+  cx.textAlign='center';
+  cx.fillStyle='rgba(0,40,0,0.7)'; cx.fillRect(0,0,W(),H());
+  cx.shadowColor='#ffee00'; cx.shadowBlur=35+Math.sin(winT*5)*8;
+  cx.fillStyle='#ffee00'; cx.font='bold '+(W()<600?52:76)+'px Arial';
+  cx.fillText('YOU ESCAPED! 🎉',W()/2,H()*0.36);
+  cx.shadowBlur=0;
+  var star=lumCount===LUMS.length?'⭐ PERFECT! ⭐':'';
+  cx.fillStyle='#aaffaa'; cx.font='bold 30px Arial';
+  cx.fillText('Lums: '+lumCount+' / '+LUMS.length+'  '+star,W()/2,H()*0.5);
+  cx.fillStyle='#ffffff'; cx.font='20px Arial';
+  cx.fillText('Click or Space to play again',W()/2,H()*0.6);
+  cx.textAlign='left';
+}
+
+// ── Main loop ─────────────────────────────────────────────────────
+function loop(ts){
+  requestAnimationFrame(loop);
+  var dt=Math.min((ts-lastT)/1000,0.05); lastT=ts;
+  update(dt);
+
+  // Beat screen flash overlay
+  if(beatFlash>0){
+    cx.fillStyle='rgba(80,0,160,'+(beatFlash*0.07)+')';
+    cx.fillRect(0,0,W(),H());
+  }
+
+  if(state==='title'){ drawTitle(); return; }
+  if(state==='dead'){ drawDead(); drawHUD(); return; }
+  if(state==='win'){ drawWin(); return; }
+
+  // Playing
+  cx.clearRect(0,0,W(),H());
+  drawBg();
+  drawGround();
+  drawLums();
+  for(var i=0;i<ENEMIES.length;i++){
+    var e=ENEMIES[i], sx=e.x-camX;
+    if(sx<-120||sx>W()+120) continue;
+    if(e.type==='zombie') drawZombie(e); else drawBat(e);
+  }
+  drawPlayer();
+  drawParticles();
+  drawHUD();
+
+  // Beat flash (on top of everything)
+  if(beatFlash>0.6){
+    cx.fillStyle='rgba(255,255,255,'+(beatFlash-0.6)*0.12+')';
+    cx.fillRect(0,0,W(),H());
+  }
+}
+
+requestAnimationFrame(function(ts){lastT=ts; requestAnimationFrame(loop);});
+</script>
+</body>
+</html>

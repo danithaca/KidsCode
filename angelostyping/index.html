@@ -1,0 +1,2415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Angelo's Typing App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Arial', sans-serif;
+            color: white;
+            padding: 20px;
+        }
+
+        h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        #gameContainer {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            max-width: 800px;
+            width: 100%;
+        }
+
+        #stats {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 30px;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .stat {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px 25px;
+            border-radius: 10px;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+
+        #wordDisplay {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            font-size: 36px;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 2px;
+        }
+
+        .letter {
+            display: inline-block;
+            padding: 2px;
+        }
+
+        .letter.correct {
+            color: #4ECDC4;
+            background: rgba(78, 205, 196, 0.2);
+            border-radius: 4px;
+        }
+
+        .letter.incorrect {
+            color: #FF6B6B;
+            background: rgba(255, 107, 107, 0.2);
+            border-radius: 4px;
+        }
+
+        .letter.current {
+            border-bottom: 3px solid #FFD700;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+
+        #inputBox {
+            width: 100%;
+            padding: 20px;
+            font-size: 24px;
+            border: 3px solid white;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            font-family: 'Courier New', monospace;
+            text-align: center;
+            outline: none;
+        }
+
+        #inputBox:focus {
+            border-color: #FFD700;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+        }
+
+        .btn {
+            margin-top: 20px;
+            padding: 15px 40px;
+            font-size: 20px;
+            background: white;
+            color: #667eea;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        #message {
+            text-align: center;
+            font-size: 18px;
+            margin-top: 20px;
+            min-height: 30px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        #startScreen, #menuScreen, #lessonScreen {
+            text-align: center;
+        }
+
+        #startScreen h2, #menuScreen h2, #lessonScreen h2 {
+            font-size: 28px;
+            margin-bottom: 20px;
+        }
+
+        #startScreen p, #menuScreen p, #lessonScreen p {
+            font-size: 18px;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+
+        .lesson-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 30px 0;
+        }
+
+        .lesson-card {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 20px;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 3px solid transparent;
+        }
+
+        .lesson-card:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-5px);
+            border-color: #FFD700;
+        }
+
+        .lesson-card h3 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .lesson-card p {
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .lesson-keys {
+            font-family: 'Courier New', monospace;
+            font-size: 18px;
+            color: #FFD700;
+            margin-top: 10px;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.3);
+            color: white;
+            margin-right: 10px;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        #lessonInfo {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            font-size: 16px;
+        }
+
+        #keyboard {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+
+        .hands-container {
+            display: flex;
+            justify-content: center;
+            gap: 60px;
+            margin-bottom: 10px;
+            padding: 10px;
+        }
+
+        .hand {
+            position: relative;
+            width: 150px;
+        }
+
+        .hand-label {
+            text-align: center;
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        .palm {
+            width: 80px;
+            height: 100px;
+            background: rgba(255, 224, 189, 0.8);
+            border-radius: 40% 40% 20% 20%;
+            margin: 0 auto;
+            position: relative;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .fingers {
+            display: flex;
+            justify-content: space-between;
+            position: absolute;
+            top: -60px;
+            width: 100%;
+            padding: 0 5px;
+        }
+
+        .finger {
+            width: 14px;
+            height: 70px;
+            border-radius: 7px 7px 3px 3px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            position: relative;
+            transition: all 0.3s;
+        }
+
+        .finger.pinky {
+            height: 50px;
+        }
+
+        .finger.ring {
+            height: 65px;
+        }
+
+        .finger.middle {
+            height: 70px;
+        }
+
+        .finger.index {
+            height: 65px;
+        }
+
+        .finger.thumb {
+            position: absolute;
+            width: 16px;
+            height: 45px;
+            border-radius: 8px;
+        }
+
+        .left-hand .thumb {
+            bottom: 30px;
+            right: -18px;
+            transform: rotate(45deg);
+        }
+
+        .right-hand .thumb {
+            bottom: 30px;
+            left: -18px;
+            transform: rotate(-45deg);
+        }
+
+        .finger-label {
+            position: absolute;
+            bottom: -20px;
+            width: 100%;
+            text-align: center;
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        .finger.active {
+            transform: scale(1.4);
+            box-shadow: 0 0 20px rgba(255, 215, 0, 1);
+            z-index: 10;
+            filter: brightness(1.5);
+        }
+
+        .mini-key.highlight {
+            background: rgba(255, 215, 0, 0.8) !important;
+            transform: scale(1.1);
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+        }
+
+        .mini-finger {
+            transition: all 0.3s;
+        }
+
+        .mini-finger.active {
+            transform: scale(1.3);
+            box-shadow: 0 0 15px rgba(255, 215, 0, 1);
+            filter: brightness(1.5);
+        }
+
+        .platform-mini-key.highlight {
+            background: rgba(255, 215, 0, 0.8) !important;
+            transform: scale(1.1);
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+        }
+
+        .platform-mini-finger.active {
+            transform: scale(1.3);
+            box-shadow: 0 0 15px rgba(255, 215, 0, 1);
+            filter: brightness(1.5);
+        }
+
+        .keyboard-row {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 8px;
+        }
+
+        .key {
+            min-width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 2px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            font-weight: bold;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+            transition: all 0.2s;
+        }
+
+        .key.spacebar {
+            min-width: 300px;
+        }
+
+        .key.left-pinky { background: rgba(255, 107, 107, 0.3); }
+        .key.left-ring { background: rgba(255, 154, 162, 0.3); }
+        .key.left-middle { background: rgba(254, 200, 154, 0.3); }
+        .key.left-index { background: rgba(255, 218, 185, 0.3); }
+        .key.right-index { background: rgba(185, 251, 192, 0.3); }
+        .key.right-middle { background: rgba(162, 210, 255, 0.3); }
+        .key.right-ring { background: rgba(189, 178, 255, 0.3); }
+        .key.right-pinky { background: rgba(255, 198, 255, 0.3); }
+
+        .key.home-row {
+            border-color: #FFD700;
+            border-width: 3px;
+        }
+
+        .key.highlight {
+            background: rgba(255, 215, 0, 0.5) !important;
+            border-color: #FFD700;
+            transform: scale(1.1);
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
+        }
+
+        .finger-guide {
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+
+        .finger-color {
+            display: inline-block;
+            width: 15px;
+            height: 15px;
+            border-radius: 3px;
+            margin: 0 5px;
+            vertical-align: middle;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 32px;
+            }
+
+            #gameContainer {
+                padding: 20px;
+            }
+
+            #stats {
+                font-size: 18px;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+
+            .stat {
+                padding: 10px 15px;
+            }
+
+            #wordDisplay {
+                font-size: 24px;
+                padding: 20px;
+            }
+
+            #inputBox {
+                font-size: 18px;
+            }
+
+            .key {
+                min-width: 30px;
+                height: 35px;
+                font-size: 12px;
+                margin: 1px;
+            }
+
+            .key.spacebar {
+                min-width: 200px;
+            }
+
+            .finger-guide {
+                font-size: 11px;
+            }
+
+            .finger-color {
+                width: 10px;
+                height: 10px;
+            }
+
+            .hands-container {
+                gap: 20px;
+                padding: 5px;
+                margin-bottom: 5px;
+            }
+
+            .hand {
+                width: 100px;
+            }
+
+            .palm {
+                width: 60px;
+                height: 80px;
+            }
+
+            .finger {
+                width: 10px;
+                height: 50px;
+            }
+
+            .finger.pinky {
+                height: 35px;
+            }
+
+            .finger.ring {
+                height: 45px;
+            }
+
+            .finger.middle {
+                height: 50px;
+            }
+
+            .finger.index {
+                height: 45px;
+            }
+
+            .finger.thumb {
+                width: 12px;
+                height: 35px;
+            }
+
+            .left-hand .thumb {
+                bottom: 20px;
+                right: -14px;
+            }
+
+            .right-hand .thumb {
+                bottom: 20px;
+                left: -14px;
+            }
+
+            .finger-label {
+                font-size: 8px;
+            }
+
+            .hand-label {
+                font-size: 14px;
+            }
+
+            #fallingCanvas {
+                width: 100% !important;
+                height: 400px !important;
+            }
+
+            #platformCanvas {
+                width: 100% !important;
+                height: 300px !important;
+            }
+
+            #gameInput {
+                font-size: 16px !important;
+            }
+
+            #miniKeyboard {
+                padding: 5px !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>ANGELO'S TYPING</h1>
+
+    <div id="gameContainer">
+        <div id="menuScreen">
+            <h2>Choose Your Mode</h2>
+            <p>Learn to type step by step, or practice with random words!</p>
+            <button class="btn" onclick="showLessons()">LESSONS</button>
+            <button class="btn" onclick="startFreePlay()">FREE PLAY</button>
+            <button class="btn" onclick="showMiniGames()">MINI GAMES</button>
+        </div>
+
+        <div id="miniGamesScreen" class="hidden">
+            <h2>Choose a Mini Game</h2>
+            <div class="lesson-grid">
+                <div class="lesson-card" onclick="startFallingWords()">
+                    <h3>Falling Words</h3>
+                    <p>Type words before they hit the ground!</p>
+                    <div class="lesson-keys">⬇️ Type Fast!</div>
+                </div>
+                <div class="lesson-card" onclick="startPlatformer()">
+                    <h3>Letter Jumper</h3>
+                    <p style="color: #FF6B6B; font-weight: bold;">⚠️ EXTREME MODE! Tiny platforms, blazing speed!</p>
+                    <div class="lesson-keys">🦘 Jump & Type!</div>
+                </div>
+            </div>
+            <button class="btn btn-secondary" onclick="showMenu()">Back to Menu</button>
+        </div>
+
+        <div id="fallingWordsGame" class="hidden">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h2>FALLING WORDS</h2>
+                <div id="gameStats" style="display: flex; justify-content: space-around; margin-bottom: 20px;">
+                    <div class="stat">
+                        <div class="stat-label">Score</div>
+                        <div id="gameScore">0</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">WPM</div>
+                        <div id="gameWPM">0</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Lives</div>
+                        <div id="gameLives">5</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Level</div>
+                        <div id="gameLevel">1</div>
+                    </div>
+                </div>
+            </div>
+
+            <canvas id="fallingCanvas" width="800" height="500" style="border: 4px solid white; border-radius: 8px; background: rgba(0, 0, 0, 0.5); display: block; margin: 0 auto;"></canvas>
+
+            <div style="text-align: center; margin-top: 10px;">
+                <button class="btn btn-secondary" onclick="toggleFallingKeyboard()" style="padding: 6px 15px; font-size: 12px;">
+                    <span id="fallingKeyboardToggleText">Hide Keyboard</span>
+                </button>
+            </div>
+
+            <div id="miniKeyboard" style="background: rgba(0, 0, 0, 0.3); padding: 10px; border-radius: 10px; margin: 15px auto; max-width: 600px;">
+                <div style="display: flex; justify-content: center; gap: 40px; margin-bottom: 10px;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 12px; font-weight: bold; margin-bottom: 5px;">LEFT HAND</div>
+                        <div style="display: flex; gap: 3px;">
+                            <div class="mini-finger left-pinky" data-mini-finger="left-pinky" style="width: 10px; height: 30px; border-radius: 3px; border: 1px solid rgba(255, 255, 255, 0.3); background: rgba(255, 107, 107, 0.3);"></div>
+                            <div class="mini-finger left-ring" data-mini-finger="left-ring" style="width: 10px; height: 35px; border-radius: 3px; border: 1px solid rgba(255, 255, 255, 0.3); background: rgba(255, 154, 162, 0.3);"></div>
+                            <div class="mini-finger left-middle" data-mini-finger="left-middle" style="width: 10px; height: 38px; border-radius: 3px; border: 1px solid rgba(255, 255, 255, 0.3); background: rgba(254, 200, 154, 0.3);"></div>
+                            <div class="mini-finger left-index" data-mini-finger="left-index" style="width: 10px; height: 35px; border-radius: 3px; border: 1px solid rgba(255, 255, 255, 0.3); background: rgba(255, 218, 185, 0.3);"></div>
+                        </div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 12px; font-weight: bold; margin-bottom: 5px;">RIGHT HAND</div>
+                        <div style="display: flex; gap: 3px;">
+                            <div class="mini-finger right-index" data-mini-finger="right-index" style="width: 10px; height: 35px; border-radius: 3px; border: 1px solid rgba(255, 255, 255, 0.3); background: rgba(185, 251, 192, 0.3);"></div>
+                            <div class="mini-finger right-middle" data-mini-finger="right-middle" style="width: 10px; height: 38px; border-radius: 3px; border: 1px solid rgba(255, 255, 255, 0.3); background: rgba(162, 210, 255, 0.3);"></div>
+                            <div class="mini-finger right-ring" data-mini-finger="right-ring" style="width: 10px; height: 35px; border-radius: 3px; border: 1px solid rgba(255, 255, 255, 0.3); background: rgba(189, 178, 255, 0.3);"></div>
+                            <div class="mini-finger right-pinky" data-mini-finger="right-pinky" style="width: 10px; height: 30px; border-radius: 3px; border: 1px solid rgba(255, 255, 255, 0.3); background: rgba(255, 198, 255, 0.3);"></div>
+                        </div>
+                    </div>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 3px; align-items: center;">
+                    <div style="display: flex; gap: 2px;">
+                        <div class="mini-key left-pinky" data-mini-key="q" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 3px; background: rgba(255, 255, 255, 0.1);">Q</div>
+                        <div class="mini-key left-ring" data-mini-key="w" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 3px; background: rgba(255, 255, 255, 0.1);">W</div>
+                        <div class="mini-key left-middle" data-mini-key="e" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 3px; background: rgba(255, 255, 255, 0.1);">E</div>
+                        <div class="mini-key left-index" data-mini-key="r" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 3px; background: rgba(255, 255, 255, 0.1);">R</div>
+                        <div class="mini-key left-index" data-mini-key="t" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 3px; background: rgba(255, 255, 255, 0.1);">T</div>
+                        <div class="mini-key right-index" data-mini-key="y" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 3px; background: rgba(255, 255, 255, 0.1);">Y</div>
+                        <div class="mini-key right-index" data-mini-key="u" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 3px; background: rgba(255, 255, 255, 0.1);">U</div>
+                        <div class="mini-key right-middle" data-mini-key="i" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 3px; background: rgba(255, 255, 255, 0.1);">I</div>
+                        <div class="mini-key right-ring" data-mini-key="o" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 3px; background: rgba(255, 255, 255, 0.1);">O</div>
+                        <div class="mini-key right-pinky" data-mini-key="p" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 3px; background: rgba(255, 255, 255, 0.1);">P</div>
+                    </div>
+                    <div style="display: flex; gap: 2px;">
+                        <div class="mini-key left-pinky" data-mini-key="a" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 2px solid #FFD700; border-radius: 3px; background: rgba(255, 255, 255, 0.1);">A</div>
+                        <div class="mini-key left-ring" data-mini-key="s" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 2px solid #FFD700; border-radius: 3px; background: rgba(255, 255, 255, 0.1);">S</div>
+                        <div class="mini-key left-middle" data-mini-key="d" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 2px solid #FFD700; border-radius: 3px; background: rgba(255, 255, 255, 0.1);">D</div>
+                        <div class="mini-key left-index" data-mini-key="f" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 2px solid #FFD700; border-radius: 3px; background: rgba(255, 255, 255, 0.1);">F</div>
+                        <div class="mini-key left-index" data-mini-key="g" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 2px solid #FFD700; border-radius: 3px; background: rgba(255, 255, 255, 0.1);">G</div>
+                        <div class="mini-key right-index" data-mini-key="h" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 2px solid #FFD700; border-radius: 3px; background: rgba(255, 255, 255, 0.1);">H</div>
+                        <div class="mini-key right-index" data-mini-key="j" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 2px solid #FFD700; border-radius: 3px; background: rgba(255, 255, 255, 0.1);">J</div>
+                        <div class="mini-key right-middle" data-mini-key="k" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 2px solid #FFD700; border-radius: 3px; background: rgba(255, 255, 255, 0.1);">K</div>
+                        <div class="mini-key right-ring" data-mini-key="l" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 2px solid #FFD700; border-radius: 3px; background: rgba(255, 255, 255, 0.1);">L</div>
+                    </div>
+                    <div style="display: flex; gap: 2px;">
+                        <div class="mini-key left-pinky" data-mini-key="z" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 3px; background: rgba(255, 255, 255, 0.1);">Z</div>
+                        <div class="mini-key left-ring" data-mini-key="x" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 3px; background: rgba(255, 255, 255, 0.1);">X</div>
+                        <div class="mini-key left-middle" data-mini-key="c" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 3px; background: rgba(255, 255, 255, 0.1);">C</div>
+                        <div class="mini-key left-index" data-mini-key="v" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 3px; background: rgba(255, 255, 255, 0.1);">V</div>
+                        <div class="mini-key right-index" data-mini-key="b" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 3px; background: rgba(255, 255, 255, 0.1);">B</div>
+                        <div class="mini-key right-index" data-mini-key="n" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 3px; background: rgba(255, 255, 255, 0.1);">N</div>
+                        <div class="mini-key right-middle" data-mini-key="m" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 3px; background: rgba(255, 255, 255, 0.1);">M</div>
+                    </div>
+                    <div style="display: flex; gap: 2px; margin-top: 3px;">
+                        <div class="mini-key" data-mini-key=" " style="min-width: 140px; height: 20px; font-size: 8px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 3px; background: rgba(255, 255, 255, 0.1);">SPACE</div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 20px;">
+                <input type="text" id="gameInput" placeholder="Type the falling words..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="width: 80%; padding: 15px; font-size: 20px; border: 3px solid white; border-radius: 10px; background: rgba(255, 255, 255, 0.9); text-align: center;">
+            </div>
+
+            <div id="gameMessage" style="text-align: center; margin-top: 20px; font-size: 18px; min-height: 30px;"></div>
+
+            <div style="text-align: center;">
+                <button class="btn" onclick="restartFallingWordsGame()">Restart Game</button>
+                <button class="btn btn-secondary" onclick="restartFallingWords()">Back to Menu</button>
+            </div>
+        </div>
+
+        <div id="platformerGame" class="hidden">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h2>LETTER JUMPER</h2>
+                <div style="display: flex; justify-content: space-around; margin-bottom: 20px;">
+                    <div class="stat">
+                        <div class="stat-label">Score</div>
+                        <div id="platformScore">0</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">WPM</div>
+                        <div id="platformWPM">0</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Accuracy</div>
+                        <div id="platformAccuracy">100%</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Level</div>
+                        <div id="platformLevel">1</div>
+                    </div>
+                </div>
+                <p style="font-size: 16px; margin-bottom: 10px; color: #FF6B6B; font-weight: bold;">⚠️ EXTREME DIFFICULTY! Tiny platforms move at blazing speed - PERFECT timing or you FALL!</p>
+            </div>
+
+            <canvas id="platformCanvas" width="800" height="400" style="border: 4px solid white; border-radius: 8px; background: linear-gradient(to bottom, #667eea 0%, #764ba2 100%); display: block; margin: 0 auto;"></canvas>
+
+            <div style="text-align: center; margin-top: 10px;">
+                <button class="btn btn-secondary" onclick="togglePlatformKeyboard()" style="padding: 6px 15px; font-size: 12px;">
+                    <span id="platformKeyboardToggleText">Hide Keyboard</span>
+                </button>
+            </div>
+
+            <div id="platformKeyboard" style="background: rgba(0, 0, 0, 0.3); padding: 10px; border-radius: 10px; margin: 15px auto; max-width: 600px;">
+                <div style="display: flex; justify-content: center; gap: 40px; margin-bottom: 10px;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 12px; font-weight: bold; margin-bottom: 5px;">LEFT HAND</div>
+                        <div style="display: flex; gap: 3px;">
+                            <div class="platform-mini-finger left-pinky" data-platform-finger="left-pinky" style="width: 10px; height: 30px; border-radius: 3px; border: 1px solid rgba(255, 255, 255, 0.3); background: rgba(255, 107, 107, 0.3); transition: all 0.3s;"></div>
+                            <div class="platform-mini-finger left-ring" data-platform-finger="left-ring" style="width: 10px; height: 35px; border-radius: 3px; border: 1px solid rgba(255, 255, 255, 0.3); background: rgba(255, 154, 162, 0.3); transition: all 0.3s;"></div>
+                            <div class="platform-mini-finger left-middle" data-platform-finger="left-middle" style="width: 10px; height: 38px; border-radius: 3px; border: 1px solid rgba(255, 255, 255, 0.3); background: rgba(254, 200, 154, 0.3); transition: all 0.3s;"></div>
+                            <div class="platform-mini-finger left-index" data-platform-finger="left-index" style="width: 10px; height: 35px; border-radius: 3px; border: 1px solid rgba(255, 255, 255, 0.3); background: rgba(255, 218, 185, 0.3); transition: all 0.3s;"></div>
+                        </div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 12px; font-weight: bold; margin-bottom: 5px;">RIGHT HAND</div>
+                        <div style="display: flex; gap: 3px;">
+                            <div class="platform-mini-finger right-index" data-platform-finger="right-index" style="width: 10px; height: 35px; border-radius: 3px; border: 1px solid rgba(255, 255, 255, 0.3); background: rgba(185, 251, 192, 0.3); transition: all 0.3s;"></div>
+                            <div class="platform-mini-finger right-middle" data-platform-finger="right-middle" style="width: 10px; height: 38px; border-radius: 3px; border: 1px solid rgba(255, 255, 255, 0.3); background: rgba(162, 210, 255, 0.3); transition: all 0.3s;"></div>
+                            <div class="platform-mini-finger right-ring" data-platform-finger="right-ring" style="width: 10px; height: 35px; border-radius: 3px; border: 1px solid rgba(255, 255, 255, 0.3); background: rgba(189, 178, 255, 0.3); transition: all 0.3s;"></div>
+                            <div class="platform-mini-finger right-pinky" data-platform-finger="right-pinky" style="width: 10px; height: 30px; border-radius: 3px; border: 1px solid rgba(255, 255, 255, 0.3); background: rgba(255, 198, 255, 0.3); transition: all 0.3s;"></div>
+                        </div>
+                    </div>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 3px; align-items: center;">
+                    <div style="display: flex; gap: 2px;">
+                        <div class="platform-mini-key left-pinky" data-platform-key="q" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 3px; background: rgba(255, 255, 255, 0.1); transition: all 0.2s;">Q</div>
+                        <div class="platform-mini-key left-ring" data-platform-key="w" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 3px; background: rgba(255, 255, 255, 0.1); transition: all 0.2s;">W</div>
+                        <div class="platform-mini-key left-middle" data-platform-key="e" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 3px; background: rgba(255, 255, 255, 0.1); transition: all 0.2s;">E</div>
+                        <div class="platform-mini-key left-index" data-platform-key="r" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 3px; background: rgba(255, 255, 255, 0.1); transition: all 0.2s;">R</div>
+                        <div class="platform-mini-key left-index" data-platform-key="t" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 3px; background: rgba(255, 255, 255, 0.1); transition: all 0.2s;">T</div>
+                        <div class="platform-mini-key right-index" data-platform-key="y" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 3px; background: rgba(255, 255, 255, 0.1); transition: all 0.2s;">Y</div>
+                        <div class="platform-mini-key right-index" data-platform-key="u" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 3px; background: rgba(255, 255, 255, 0.1); transition: all 0.2s;">U</div>
+                        <div class="platform-mini-key right-middle" data-platform-key="i" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 3px; background: rgba(255, 255, 255, 0.1); transition: all 0.2s;">I</div>
+                        <div class="platform-mini-key right-ring" data-platform-key="o" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 3px; background: rgba(255, 255, 255, 0.1); transition: all 0.2s;">O</div>
+                        <div class="platform-mini-key right-pinky" data-platform-key="p" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 3px; background: rgba(255, 255, 255, 0.1); transition: all 0.2s;">P</div>
+                    </div>
+                    <div style="display: flex; gap: 2px;">
+                        <div class="platform-mini-key left-pinky" data-platform-key="a" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 2px solid #FFD700; border-radius: 3px; background: rgba(255, 255, 255, 0.1); transition: all 0.2s;">A</div>
+                        <div class="platform-mini-key left-ring" data-platform-key="s" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 2px solid #FFD700; border-radius: 3px; background: rgba(255, 255, 255, 0.1); transition: all 0.2s;">S</div>
+                        <div class="platform-mini-key left-middle" data-platform-key="d" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 2px solid #FFD700; border-radius: 3px; background: rgba(255, 255, 255, 0.1); transition: all 0.2s;">D</div>
+                        <div class="platform-mini-key left-index" data-platform-key="f" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 2px solid #FFD700; border-radius: 3px; background: rgba(255, 255, 255, 0.1); transition: all 0.2s;">F</div>
+                        <div class="platform-mini-key left-index" data-platform-key="g" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 2px solid #FFD700; border-radius: 3px; background: rgba(255, 255, 255, 0.1); transition: all 0.2s;">G</div>
+                        <div class="platform-mini-key right-index" data-platform-key="h" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 2px solid #FFD700; border-radius: 3px; background: rgba(255, 255, 255, 0.1); transition: all 0.2s;">H</div>
+                        <div class="platform-mini-key right-index" data-platform-key="j" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 2px solid #FFD700; border-radius: 3px; background: rgba(255, 255, 255, 0.1); transition: all 0.2s;">J</div>
+                        <div class="platform-mini-key right-middle" data-platform-key="k" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 2px solid #FFD700; border-radius: 3px; background: rgba(255, 255, 255, 0.1); transition: all 0.2s;">K</div>
+                        <div class="platform-mini-key right-ring" data-platform-key="l" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 2px solid #FFD700; border-radius: 3px; background: rgba(255, 255, 255, 0.1); transition: all 0.2s;">L</div>
+                    </div>
+                    <div style="display: flex; gap: 2px;">
+                        <div class="platform-mini-key left-pinky" data-platform-key="z" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 3px; background: rgba(255, 255, 255, 0.1); transition: all 0.2s;">Z</div>
+                        <div class="platform-mini-key left-ring" data-platform-key="x" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 3px; background: rgba(255, 255, 255, 0.1); transition: all 0.2s;">X</div>
+                        <div class="platform-mini-key left-middle" data-platform-key="c" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 3px; background: rgba(255, 255, 255, 0.1); transition: all 0.2s;">C</div>
+                        <div class="platform-mini-key left-index" data-platform-key="v" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 3px; background: rgba(255, 255, 255, 0.1); transition: all 0.2s;">V</div>
+                        <div class="platform-mini-key right-index" data-platform-key="b" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 3px; background: rgba(255, 255, 255, 0.1); transition: all 0.2s;">B</div>
+                        <div class="platform-mini-key right-index" data-platform-key="n" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 3px; background: rgba(255, 255, 255, 0.1); transition: all 0.2s;">N</div>
+                        <div class="platform-mini-key right-middle" data-platform-key="m" style="min-width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 3px; background: rgba(255, 255, 255, 0.1); transition: all 0.2s;">M</div>
+                    </div>
+                    <div style="display: flex; gap: 2px; margin-top: 3px;">
+                        <div class="platform-mini-key" data-platform-key=" " style="min-width: 140px; height: 20px; font-size: 8px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 3px; background: rgba(255, 255, 255, 0.1); transition: all 0.2s;">SPACE</div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 20px;">
+                <div style="font-size: 24px; font-weight: bold; margin-bottom: 10px;">
+                    Next Letter: <span id="nextLetter" style="color: #FFD700; font-size: 36px;">-</span>
+                </div>
+            </div>
+
+            <div id="platformMessage" style="text-align: center; margin-top: 20px; font-size: 18px; min-height: 30px;"></div>
+
+            <div style="text-align: center;">
+                <button class="btn" onclick="restartPlatformerGame()">Restart Game</button>
+                <button class="btn btn-secondary" onclick="restartPlatformer()">Back to Menu</button>
+            </div>
+        </div>
+
+        <div id="lessonScreen" class="hidden">
+            <h2>Choose a Lesson</h2>
+            <div class="lesson-grid">
+                <div class="lesson-card" onclick="startLesson(1)">
+                    <h3>Lesson 1</h3>
+                    <p>Home Row</p>
+                    <div class="lesson-keys">asdfgh jkl;</div>
+                </div>
+                <div class="lesson-card" onclick="startLesson(2)">
+                    <h3>Lesson 2</h3>
+                    <p>Top Row</p>
+                    <div class="lesson-keys">qwert yuiop</div>
+                </div>
+                <div class="lesson-card" onclick="startLesson(3)">
+                    <h3>Lesson 3</h3>
+                    <p>Bottom Row</p>
+                    <div class="lesson-keys">zxcv bnm</div>
+                </div>
+                <div class="lesson-card" onclick="startLesson(4)">
+                    <h3>Lesson 4</h3>
+                    <p>Numbers</p>
+                    <div class="lesson-keys">1234567890</div>
+                </div>
+                <div class="lesson-card" onclick="startLesson(5)">
+                    <h3>Lesson 5</h3>
+                    <p>All Together</p>
+                    <div class="lesson-keys">Mix of all keys</div>
+                </div>
+            </div>
+            <button class="btn btn-secondary" onclick="showMenu()">Back to Menu</button>
+        </div>
+
+        <div id="gameScreen" class="hidden">
+            <div id="lessonInfo" class="hidden"></div>
+
+            <div style="text-align: center; margin-bottom: 10px;">
+                <button class="btn btn-secondary" onclick="toggleKeyboard()" style="padding: 8px 20px; font-size: 14px;">
+                    <span id="keyboardToggleText">Hide Keyboard</span>
+                </button>
+            </div>
+
+            <div id="keyboard">
+                <div class="hands-container">
+                    <div class="hand left-hand">
+                        <div class="hand-label">LEFT HAND</div>
+                        <div class="palm">
+                            <div class="fingers">
+                                <div class="finger pinky left-pinky" data-finger="left-pinky">
+                                    <div class="finger-label">Pinky</div>
+                                </div>
+                                <div class="finger ring left-ring" data-finger="left-ring">
+                                    <div class="finger-label">Ring</div>
+                                </div>
+                                <div class="finger middle left-middle" data-finger="left-middle">
+                                    <div class="finger-label">Middle</div>
+                                </div>
+                                <div class="finger index left-index" data-finger="left-index">
+                                    <div class="finger-label">Index</div>
+                                </div>
+                            </div>
+                            <div class="finger thumb left-index" data-finger="left-thumb">
+                                <div class="finger-label" style="bottom: -25px;">Thumb</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="hand right-hand">
+                        <div class="hand-label">RIGHT HAND</div>
+                        <div class="palm">
+                            <div class="fingers">
+                                <div class="finger index right-index" data-finger="right-index">
+                                    <div class="finger-label">Index</div>
+                                </div>
+                                <div class="finger middle right-middle" data-finger="right-middle">
+                                    <div class="finger-label">Middle</div>
+                                </div>
+                                <div class="finger ring right-ring" data-finger="right-ring">
+                                    <div class="finger-label">Ring</div>
+                                </div>
+                                <div class="finger pinky right-pinky" data-finger="right-pinky">
+                                    <div class="finger-label">Pinky</div>
+                                </div>
+                            </div>
+                            <div class="finger thumb right-index" data-finger="right-thumb">
+                                <div class="finger-label" style="bottom: -25px;">Thumb</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="keyboard-row">
+                    <div class="key left-pinky" data-key="1">1</div>
+                    <div class="key left-ring" data-key="2">2</div>
+                    <div class="key left-middle" data-key="3">3</div>
+                    <div class="key left-index" data-key="4">4</div>
+                    <div class="key left-index" data-key="5">5</div>
+                    <div class="key right-index" data-key="6">6</div>
+                    <div class="key right-index" data-key="7">7</div>
+                    <div class="key right-middle" data-key="8">8</div>
+                    <div class="key right-ring" data-key="9">9</div>
+                    <div class="key right-pinky" data-key="0">0</div>
+                </div>
+                <div class="keyboard-row">
+                    <div class="key left-pinky" data-key="q">Q</div>
+                    <div class="key left-ring" data-key="w">W</div>
+                    <div class="key left-middle" data-key="e">E</div>
+                    <div class="key left-index" data-key="r">R</div>
+                    <div class="key left-index" data-key="t">T</div>
+                    <div class="key right-index" data-key="y">Y</div>
+                    <div class="key right-index" data-key="u">U</div>
+                    <div class="key right-middle" data-key="i">I</div>
+                    <div class="key right-ring" data-key="o">O</div>
+                    <div class="key right-pinky" data-key="p">P</div>
+                </div>
+                <div class="keyboard-row">
+                    <div class="key left-pinky home-row" data-key="a">A</div>
+                    <div class="key left-ring home-row" data-key="s">S</div>
+                    <div class="key left-middle home-row" data-key="d">D</div>
+                    <div class="key left-index home-row" data-key="f">F</div>
+                    <div class="key left-index home-row" data-key="g">G</div>
+                    <div class="key right-index home-row" data-key="h">H</div>
+                    <div class="key right-index home-row" data-key="j">J</div>
+                    <div class="key right-middle home-row" data-key="k">K</div>
+                    <div class="key right-ring home-row" data-key="l">L</div>
+                    <div class="key right-pinky home-row" data-key=";">;</div>
+                </div>
+                <div class="keyboard-row">
+                    <div class="key left-pinky" data-key="z">Z</div>
+                    <div class="key left-ring" data-key="x">X</div>
+                    <div class="key left-middle" data-key="c">C</div>
+                    <div class="key left-index" data-key="v">V</div>
+                    <div class="key right-index" data-key="b">B</div>
+                    <div class="key right-index" data-key="n">N</div>
+                    <div class="key right-middle" data-key="m">M</div>
+                </div>
+                <div class="keyboard-row">
+                    <div class="key spacebar" data-key=" ">SPACE</div>
+                </div>
+                <div style="text-align: center; margin-top: 10px; font-size: 14px;">
+                    Gold border = HOME ROW (rest your fingers here!)
+                </div>
+            </div>
+
+            <div id="stats">
+                <div class="stat">
+                    <div class="stat-label">Time Left</div>
+                    <div id="timeLeft">5:00</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">WPM</div>
+                    <div id="wpm">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Accuracy</div>
+                    <div id="accuracy">100%</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Words Typed</div>
+                    <div id="wordCount">0</div>
+                </div>
+            </div>
+
+            <div id="wordDisplay"></div>
+
+            <input type="text" id="inputBox" placeholder="Type here..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+
+            <div id="message"></div>
+
+            <button class="btn" onclick="restartGame()">Back to Menu</button>
+        </div>
+    </div>
+
+    <script>
+        const freePlayWords = [
+            'apple', 'banana', 'orange', 'grape', 'mango', 'peach', 'cherry', 'lemon', 'melon', 'berry',
+            'tiger', 'elephant', 'lion', 'monkey', 'zebra', 'giraffe', 'panda', 'koala', 'penguin', 'dolphin',
+            'computer', 'keyboard', 'mouse', 'screen', 'laptop', 'tablet', 'printer', 'speaker', 'webcam', 'router',
+            'pizza', 'burger', 'pasta', 'sandwich', 'salad', 'taco', 'sushi', 'curry', 'noodle', 'waffle',
+            'soccer', 'basketball', 'tennis', 'baseball', 'football', 'hockey', 'golf', 'swimming', 'boxing', 'cycling',
+            'the quick brown fox jumps over the lazy dog',
+            'practice makes perfect every single time',
+            'never give up on your dreams',
+            'believe in yourself and you will succeed',
+            'coding is amazing and fun to learn',
+            'guitar', 'piano', 'drums', 'violin', 'trumpet', 'flute', 'harp', 'banjo', 'cello', 'clarinet',
+            'mountain', 'ocean', 'forest', 'desert', 'river', 'valley', 'canyon', 'island', 'meadow', 'glacier',
+            'learning is a wonderful journey',
+            'keep moving forward every day',
+            'stay positive and strong always',
+            'education opens doors to success',
+            'friendship is precious and valuable',
+            'happy', 'excited', 'awesome', 'fantastic', 'brilliant', 'amazing', 'wonderful', 'joyful', 'cheerful', 'delighted',
+            'dragon', 'wizard', 'castle', 'knight', 'princess', 'prince', 'kingdom', 'treasure', 'magic', 'spell',
+            'music makes me happy and relaxed',
+            'books open new worlds for readers',
+            'art speaks without any words',
+            'nature is beautiful and peaceful',
+            'science explains everything around us',
+            'rocket', 'planet', 'galaxy', 'astronaut', 'satellite', 'comet', 'meteor', 'universe', 'nebula', 'telescope',
+            'summer', 'winter', 'spring', 'autumn', 'sunrise', 'sunset', 'rainbow', 'thunder', 'lightning', 'tornado',
+            'video games are fun to play',
+            'sports keep us fit and healthy',
+            'food brings joy to everyone',
+            'travel broadens your mind greatly',
+            'laughter is the best medicine',
+            'birthday', 'celebrate', 'party', 'festival', 'holiday', 'vacation', 'adventure', 'journey', 'explore', 'discover',
+            'painting', 'drawing', 'sketch', 'sculpture', 'artist', 'gallery', 'museum', 'portrait', 'landscape', 'canvas',
+            'sunshine on a cloudy day',
+            'stars shine bright in the dark night',
+            'flowers bloom in spring time',
+            'birds sing in the morning',
+            'waves crash on the shore',
+            'science', 'biology', 'chemistry', 'physics', 'history', 'geography', 'mathematics', 'algebra', 'geometry', 'calculus',
+            'butterfly', 'dragonfly', 'ladybug', 'firefly', 'beetle', 'cricket', 'grasshopper', 'caterpillar', 'spider', 'scorpion',
+            'family comes first always',
+            'health is true wealth',
+            'time is very valuable',
+            'honesty is the best policy',
+            'kindness costs nothing at all',
+            'building', 'bridge', 'tower', 'stadium', 'library', 'hospital', 'school', 'airport', 'station', 'market',
+            'diamond', 'emerald', 'ruby', 'sapphire', 'crystal', 'pearl', 'gold', 'silver', 'bronze', 'platinum',
+            'dream big and work hard',
+            'success takes dedication and effort',
+            'patience is a virtue to learn',
+            'respect everyone around you always',
+            'courage helps you face your fears',
+            'mystery', 'puzzle', 'riddle', 'secret', 'clue', 'detective', 'investigation', 'evidence', 'witness', 'suspect',
+            'courage', 'strength', 'wisdom', 'patience', 'kindness', 'honesty', 'loyalty', 'bravery', 'justice', 'freedom',
+            'read books every single day',
+            'exercise keeps your body strong',
+            'smile and the world smiles back',
+            'help others whenever you can',
+            'listen before you speak today',
+            'telephone', 'message', 'email', 'letter', 'package', 'delivery', 'mailbox', 'postcard', 'envelope', 'stamp',
+            'thank you for your help',
+            'good morning have a great day',
+            'see you later alligator',
+            'happy birthday to you today',
+            'welcome to the typing game',
+            'you are doing great job',
+            'keep up the good work',
+            'awesome typing skills there',
+            'fantastic progress so far',
+            'excellent work keep going',
+            'think before you act always',
+            'work smart not just hard',
+            'make every moment count today',
+            'enjoy the little things in life',
+            'stay curious and keep learning',
+            'be kind to everyone you meet',
+            'follow your heart and dreams',
+            'create your own happiness daily',
+            'every day is a new chance'
+        ];
+
+        const lessons = {
+            1: {
+                name: 'Home Row',
+                description: 'Learn the home row keys: a s d f g h j k l ;',
+                keys: 'asdfgh jkl;',
+                words: ['aaa', 'sss', 'ddd', 'fff', 'ggg', 'hhh', 'jjj', 'kkk', 'lll',
+                        'asd', 'fds', 'fgh', 'ghj', 'hjk', 'jkl', 'lkj', 'asdf', 'fdsa', 'hjkl',
+                        'sad', 'dad', 'lad', 'had', 'has', 'gas', 'gal', 'hal', 'ash', 'dash',
+                        'lass', 'sass', 'ask', 'flask', 'hash', 'dash', 'gash', 'flash', 'slash', 'glass',
+                        'falls', 'salad', 'all', 'hall', 'shall', 'half', 'glad', 'skull', 'dull', 'full',
+                        'hag', 'sag', 'gag', 'jag', 'lag', 'shag', 'flag', 'drag', 'glad', 'salads',
+                        'fall', 'hall', 'gall', 'dash', 'lash', 'hash', 'gasp', 'hasp', 'aha', 'alas',
+                        'add', 'ads', 'aft', 'aah', 'aha', 'ail', 'all', 'and', 'ash', 'ask',
+                        'dad', 'dag', 'dah', 'dal', 'elk', 'ell', 'fad', 'fall', 'false', 'flask',
+                        'gad', 'gaff', 'gag', 'gal', 'gala', 'gale', 'gall', 'half', 'hall', 'halo',
+                        'jag', 'jail', 'jak', 'kale', 'keel', 'kelp', 'kill', 'lad', 'lag', 'lake',
+                        'a sad lad had a salad', 'dad has a flask', 'hall has glass', 'fall shall pass',
+                        'ask dad', 'all falls', 'half glass', 'lag has flask', 'glad lads ask', 'a fall dash',
+                        'sad dad had salad', 'all shall fall', 'half a flask', 'ask a glad lad', 'glass falls fast']
+            },
+            2: {
+                name: 'Top Row',
+                description: 'Practice the top row keys: q w e r t y u i o p',
+                keys: 'qwert yuiop',
+                words: ['qqq', 'www', 'eee', 'rrr', 'ttt', 'yyy', 'uuu', 'iii', 'ooo', 'ppp',
+                        'qwe', 'wer', 'ert', 'rty', 'tyu', 'yui', 'uio', 'iop', 'qwer', 'tyui',
+                        'wet', 'pet', 'port', 'type', 'tire', 'wire', 'quit', 'quite', 'quote', 'query',
+                        'poet', 'query', 'tower', 'power', 'outer', 'your', 'pour', 'tour', 'trout', 'queue',
+                        'right', 'weigh', 'eight', 'high', 'thigh', 'sigh', 'write', 'white', 'while', 'where',
+                        'tough', 'rough', 'thought', 'through', 'though', 'threw', 'three', 'tree', 'true', 'troop',
+                        'tie', 'pie', 'ripe', 'rope', 'rote', 'route', 'tree', 'upper', 'opera', 'opo',
+                        'put', 'rut', 'riot', 'pity', 'pout', 'pier', 'wipe', 'wire', 'were', 'weep',
+                        'you', 'yew', 'yet', 'yip', 'your', 'youth', 'yore', 'treaty', 'equity', 'query',
+                        'queer', 'quire', 'quoit', 'quote', 'water', 'wetter', 'writer', 'twitter', 'pottery', 'rotary',
+                        'the wet pet', 'type your quote', 'power your tower', 'your pier is wet', 'quite a writer',
+                        'three wet trees', 'write your poetry', 'water the tree', 'your route to power', 'through the tower',
+                        'a poet writes poetry', 'type the entire query', 'the upper tower is wet', 'your youthful route', 'quite true']
+            },
+            3: {
+                name: 'Bottom Row',
+                description: 'Master the bottom row keys: z x c v b n m',
+                keys: 'zxcv bnm',
+                words: ['zzz', 'xxx', 'ccc', 'vvv', 'bbb', 'nnn', 'mmm',
+                        'zxc', 'xcv', 'cvb', 'vbn', 'bnm', 'zxcv', 'xcvb', 'cvbn',
+                        'zoo', 'box', 'can', 'van', 'ban', 'man', 'nam', 'max', 'mix', 'nix',
+                        'cabin', 'zoom', 'venom', 'bacon', 'manz', 'buzz', 'fuzz', 'fizz', 'jazz', 'maze',
+                        'bag', 'hug', 'bug', 'big', 'chug', 'shag', 'nag', 'mag', 'sag', 'wag',
+                        'hang', 'bang', 'gang', 'sang', 'bring', 'cling', 'swing', 'spring', 'sting', 'string',
+                        'bean', 'been', 'bone', 'cone', 'zone', 'zombie', 'zen', 'zeal', 'zinc', 'zing',
+                        'cave', 'cove', 'move', 'prove', 'mauve', 'cave', 'carve', 'serve', 'nerve', 'verve',
+                        'moon', 'noon', 'boon', 'croon', 'mambo', 'combo', 'climb', 'comb', 'bomb', 'numb',
+                        'exam', 'vex', 'wax', 'tax', 'fax', 'hex', 'fix', 'six', 'mix', 'nix',
+                        'the man in van', 'zoom to the cabin', 'bacon in the box', 'a big bag of beans', 'max can fix vans',
+                        'bring the box back', 'the jazz band swings', 'climb the cabin', 'mix the combo', 'zoom in on man',
+                        'venom in the cave', 'a numb thumb', 'the exam was mixed', 'a zinc box', 'zeal brings success']
+            },
+            4: {
+                name: 'Numbers',
+                description: 'Learn to type numbers: 1 2 3 4 5 6 7 8 9 0',
+                keys: '1234567890',
+                words: ['111', '222', '333', '444', '555', '666', '777', '888', '999', '000',
+                        '123', '456', '789', '012', '1234', '5678', '9012', '3456', '7890', '2468',
+                        '2024', '1000', '500', '100', '42', '365', '24', '60', '90', '180',
+                        '10', '20', '30', '40', '50', '60', '70', '80', '90', '100',
+                        '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th',
+                        '246', '369', '147', '258', '159', '357', '951', '753', '852', '654',
+                        '11', '22', '33', '44', '55', '66', '77', '88', '99', '00',
+                        '1001', '2002', '3003', '4004', '5005', '6006', '7007', '8008', '9009', '1010',
+                        '12', '23', '34', '45', '56', '67', '78', '89', '90', '01',
+                        '121', '232', '343', '454', '565', '676', '787', '898', '909', '1010',
+                        'count to 10', 'there are 365 days', 'add 42 and 58', 'multiply 12 by 5', 'divide 100 by 4',
+                        'the year 2024', 'room number 101', 'call 911 emergency', 'age 18 years old', 'score 99 points',
+                        '123 is easy', 'add 7 plus 8', 'count from 1 to 100', 'the answer is 42', 'there are 7 days']
+            },
+            5: {
+                name: 'All Together',
+                description: 'Practice everything you learned!',
+                keys: 'All keys',
+                words: ['quick', 'brown', 'fox', 'jump', 'lazy', 'dog', 'the', 'and', 'for', 'are',
+                        'jumps', 'over', 'pack', 'my', 'box', 'with', 'five', 'dozen', 'liquor', 'jugs',
+                        'crazy', 'exam', 'night', 'light', 'sight', 'fight', 'might', 'bright', 'flight', 'right',
+                        'ghost', 'great', 'graph', 'laugh', 'tough', 'rough', 'enough', 'cough', 'dough', 'though',
+                        'height', 'weight', 'taught', 'caught', 'brought', 'thought', 'fought', 'sought', 'bought', 'wrought',
+                        'amazing', 'blazing', 'grazing', 'crazing', 'practice', 'perfect', 'perform', 'phoenix', 'physical', 'phantom',
+                        'alphabet', 'benefit', 'computer', 'document', 'elephant', 'fantastic', 'generate', 'harmony', 'imagine', 'justify',
+                        'keyboard', 'language', 'mountain', 'navigate', 'organize', 'platform', 'question', 'resource', 'strength', 'technology',
+                        'universe', 'vacation', 'wireless', 'examine', 'yourself', 'zodiac', 'adventure', 'beautiful', 'celebrate', 'different',
+                        'education', 'fortunate', 'generous', 'happiness', 'important', 'knowledge', 'learning', 'magnificent', 'necessary', 'opportunity',
+                        'the quick brown fox jumps over the lazy dog', 'pack my box with five dozen liquor jugs',
+                        'practice makes perfect typing', 'the early bird catches the worm', 'all good things come to those who wait',
+                        'knowledge is power', 'time flies when having fun', 'never give up on your dreams', 'believe in yourself always',
+                        'every cloud has a silver lining', 'actions speak louder than words', 'where there is a will there is a way',
+                        'the pen is mightier than the sword', 'better late than never', 'honesty is the best policy',
+                        'a journey of thousand miles begins with a single step', 'you miss 100 percent of shots you do not take',
+                        'success is not final failure is not fatal', 'life is what happens when you are busy making other plans',
+                        'in the middle of difficulty lies opportunity', 'learning never exhausts the mind']
+            }
+        };
+
+        let gameState = {
+            currentWord: '',
+            currentInput: '',
+            wordsCompleted: 0,
+            totalWords: 10,
+            correctChars: 0,
+            totalChars: 0,
+            startTime: null,
+            isPlaying: false,
+            mistakes: [],
+            currentLesson: null,
+            mode: 'freeplay',
+            timeLeft: 300, // 5 minutes in seconds
+            timerInterval: null
+        };
+
+        function showMenu() {
+            document.getElementById('menuScreen').classList.remove('hidden');
+            document.getElementById('lessonScreen').classList.add('hidden');
+            document.getElementById('gameScreen').classList.add('hidden');
+            document.getElementById('miniGamesScreen').classList.add('hidden');
+            document.getElementById('fallingWordsGame').classList.add('hidden');
+            document.getElementById('platformerGame').classList.add('hidden');
+        }
+
+        function showLessons() {
+            document.getElementById('menuScreen').classList.add('hidden');
+            document.getElementById('lessonScreen').classList.remove('hidden');
+        }
+
+        function showMiniGames() {
+            document.getElementById('menuScreen').classList.add('hidden');
+            document.getElementById('miniGamesScreen').classList.remove('hidden');
+        }
+
+        function startFreePlay() {
+            gameState.mode = 'freeplay';
+            gameState.currentLesson = null;
+            startGame();
+        }
+
+        function startLesson(lessonNumber) {
+            gameState.mode = 'lesson';
+            gameState.currentLesson = lessonNumber;
+            const lesson = lessons[lessonNumber];
+
+            document.getElementById('lessonScreen').classList.add('hidden');
+            document.getElementById('gameScreen').classList.remove('hidden');
+            document.getElementById('lessonInfo').classList.remove('hidden');
+            document.getElementById('lessonInfo').innerHTML = `
+                <strong>Lesson ${lessonNumber}: ${lesson.name}</strong><br>
+                ${lesson.description}
+            `;
+
+            startGame();
+        }
+
+        function getRandomWord() {
+            if (gameState.mode === 'lesson' && gameState.currentLesson) {
+                const lessonWords = lessons[gameState.currentLesson].words;
+                return lessonWords[Math.floor(Math.random() * lessonWords.length)];
+            }
+            return freePlayWords[Math.floor(Math.random() * freePlayWords.length)];
+        }
+
+        function startGame() {
+            document.getElementById('menuScreen').classList.add('hidden');
+            document.getElementById('gameScreen').classList.remove('hidden');
+
+            gameState.currentWord = '';
+            gameState.currentInput = '';
+            gameState.wordsCompleted = 0;
+            gameState.totalWords = 10;
+            gameState.correctChars = 0;
+            gameState.totalChars = 0;
+            gameState.startTime = Date.now();
+            gameState.isPlaying = true;
+            gameState.mistakes = [];
+            gameState.timeLeft = 300; // Reset to 5 minutes
+
+            // Clear any existing timer
+            if (gameState.timerInterval) {
+                clearInterval(gameState.timerInterval);
+            }
+
+            // Start the timer
+            gameState.timerInterval = setInterval(updateTimer, 1000);
+            updateTimerDisplay();
+
+            document.getElementById('inputBox').disabled = false;
+            loadNewWord();
+            document.getElementById('inputBox').focus();
+        }
+
+        function restartGame() {
+            // Clear the timer
+            if (gameState.timerInterval) {
+                clearInterval(gameState.timerInterval);
+                gameState.timerInterval = null;
+            }
+
+            document.getElementById('menuScreen').classList.remove('hidden');
+            document.getElementById('gameScreen').classList.add('hidden');
+            document.getElementById('lessonInfo').classList.add('hidden');
+            document.getElementById('message').textContent = '';
+            document.getElementById('inputBox').value = '';
+        }
+
+        function updateTimer() {
+            if (!gameState.isPlaying) return;
+
+            gameState.timeLeft--;
+            updateTimerDisplay();
+
+            if (gameState.timeLeft <= 0) {
+                timeUp();
+            }
+        }
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(gameState.timeLeft / 60);
+            const seconds = gameState.timeLeft % 60;
+            const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            document.getElementById('timeLeft').textContent = timeString;
+
+            // Change color when time is running low
+            const timeElement = document.getElementById('timeLeft');
+            if (gameState.timeLeft <= 60) {
+                timeElement.style.color = '#FF6B6B';
+            } else if (gameState.timeLeft <= 180) {
+                timeElement.style.color = '#FFD700';
+            } else {
+                timeElement.style.color = 'white';
+            }
+        }
+
+        function timeUp() {
+            clearInterval(gameState.timerInterval);
+            gameState.timerInterval = null;
+            gameState.isPlaying = false;
+
+            playRingingSound();
+
+            const wpm = calculateWPM();
+            const accuracy = calculateAccuracy();
+            const stars = getStarRating(wpm, accuracy);
+            const starDisplay = getStarDisplay(stars);
+
+            document.getElementById('wordDisplay').innerHTML = `
+                <div style="text-align: center;">
+                    <div style="font-size: 48px; margin-bottom: 20px;">TIME'S UP!</div>
+                    <div style="font-size: 60px; color: #FFD700; margin-bottom: 20px;">${starDisplay}</div>
+                    <div style="font-size: 24px; margin-bottom: 10px;">Final Stats:</div>
+                    <div style="font-size: 24px;">Words Completed: ${gameState.wordsCompleted}</div>
+                    <div style="font-size: 24px;">WPM: ${wpm}</div>
+                    <div style="font-size: 24px;">Accuracy: ${accuracy}%</div>
+                </div>
+            `;
+            document.getElementById('inputBox').disabled = true;
+            document.getElementById('message').textContent = 'Great practice! Click Back to Menu to try again.';
+            document.getElementById('message').style.color = '#FFD700';
+        }
+
+        function playRingingSound() {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+            // Create multiple rings
+            for (let i = 0; i < 3; i++) {
+                setTimeout(() => {
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+
+                    oscillator.frequency.value = 800;
+                    oscillator.type = 'sine';
+
+                    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + 0.5);
+                }, i * 600);
+            }
+        }
+
+        function loadNewWord() {
+            gameState.currentWord = getRandomWord();
+            gameState.currentInput = '';
+            updateWordDisplay();
+            document.getElementById('inputBox').value = '';
+            document.getElementById('message').textContent = '';
+        }
+
+        function updateWordDisplay() {
+            const wordDisplay = document.getElementById('wordDisplay');
+            wordDisplay.innerHTML = '';
+
+            // Remove all highlights from keyboard and fingers
+            document.querySelectorAll('.key').forEach(key => {
+                key.classList.remove('highlight');
+            });
+            document.querySelectorAll('.finger').forEach(finger => {
+                finger.classList.remove('active');
+            });
+
+            for (let i = 0; i < gameState.currentWord.length; i++) {
+                const letter = document.createElement('span');
+                letter.classList.add('letter');
+
+                // Display space as underscore for visibility
+                if (gameState.currentWord[i] === ' ') {
+                    letter.textContent = '_';
+                    letter.style.color = 'rgba(255, 255, 255, 0.5)';
+                } else {
+                    letter.textContent = gameState.currentWord[i];
+                }
+
+                if (i < gameState.currentInput.length) {
+                    if (gameState.currentInput[i] === gameState.currentWord[i]) {
+                        letter.classList.add('correct');
+                        letter.style.color = '#4ECDC4';
+                    } else {
+                        letter.classList.add('incorrect');
+                    }
+                } else if (i === gameState.currentInput.length) {
+                    letter.classList.add('current');
+                    // Highlight the current key on keyboard
+                    highlightKey(gameState.currentWord[i]);
+                }
+
+                wordDisplay.appendChild(letter);
+            }
+        }
+
+        function highlightKey(char) {
+            const key = document.querySelector(`.key[data-key="${char.toLowerCase()}"]`);
+            if (key) {
+                key.classList.add('highlight');
+
+                // Find which finger class this key has and highlight the corresponding finger
+                const fingerClasses = ['left-pinky', 'left-ring', 'left-middle', 'left-index',
+                                      'right-index', 'right-middle', 'right-ring', 'right-pinky'];
+
+                for (let fingerClass of fingerClasses) {
+                    if (key.classList.contains(fingerClass)) {
+                        const finger = document.querySelector(`.finger[data-finger="${fingerClass}"]`);
+                        if (finger) {
+                            finger.classList.add('active');
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+        function playErrorSound() {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.frequency.value = 200;
+            oscillator.type = 'square';
+
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.2);
+        }
+
+        function getStarRating(wpm, accuracy) {
+            // Calculate stars based on WPM and accuracy
+            let stars = 0;
+
+            // WPM scoring (up to 3 stars)
+            if (wpm >= 40) stars += 3;
+            else if (wpm >= 25) stars += 2;
+            else if (wpm >= 15) stars += 1;
+
+            // Accuracy scoring (up to 2 stars)
+            if (accuracy >= 95) stars += 2;
+            else if (accuracy >= 85) stars += 1;
+
+            return Math.min(5, stars); // Cap at 5 stars
+        }
+
+        function getStarDisplay(stars) {
+            const fullStar = '★';
+            const emptyStar = '☆';
+            return fullStar.repeat(stars) + emptyStar.repeat(5 - stars);
+        }
+
+        function calculateWPM() {
+            const timeElapsed = (Date.now() - gameState.startTime) / 1000 / 60; // minutes
+            const wordsTyped = gameState.wordsCompleted;
+            return Math.round(wordsTyped / timeElapsed) || 0;
+        }
+
+        function calculateAccuracy() {
+            if (gameState.totalChars === 0) return 100;
+            return Math.round((gameState.correctChars / gameState.totalChars) * 100);
+        }
+
+        function updateStats() {
+            document.getElementById('wpm').textContent = calculateWPM();
+            document.getElementById('accuracy').textContent = calculateAccuracy() + '%';
+            document.getElementById('wordCount').textContent = gameState.wordsCompleted;
+        }
+
+        function checkWord() {
+            const input = gameState.currentInput;
+            const word = gameState.currentWord;
+
+            if (input === word) {
+                // Count actual words (space-separated) in the completed text
+                const actualWordCount = word.trim().split(/\s+/).length;
+                gameState.wordsCompleted += actualWordCount;
+                gameState.correctChars += word.length;
+                gameState.totalChars += word.length;
+
+                document.getElementById('message').textContent = 'Correct!';
+                document.getElementById('message').style.color = '#4ECDC4';
+
+                updateStats();
+
+                // Just load the next word - no word limit, only timer limit
+                setTimeout(loadNewWord, 500);
+            }
+        }
+
+        function endGame() {
+            // Clear the timer
+            if (gameState.timerInterval) {
+                clearInterval(gameState.timerInterval);
+                gameState.timerInterval = null;
+            }
+
+            gameState.isPlaying = false;
+            const wpm = calculateWPM();
+            const accuracy = calculateAccuracy();
+            const stars = getStarRating(wpm, accuracy);
+            const starDisplay = getStarDisplay(stars);
+            const timeUsed = 300 - gameState.timeLeft;
+            const minutes = Math.floor(timeUsed / 60);
+            const seconds = timeUsed % 60;
+
+            document.getElementById('wordDisplay').innerHTML = `
+                <div style="text-align: center;">
+                    <div style="font-size: 48px; margin-bottom: 20px;">FINISHED!</div>
+                    <div style="font-size: 60px; color: #FFD700; margin-bottom: 20px;">${starDisplay}</div>
+                    <div style="font-size: 24px;">Time Used: ${minutes}:${seconds.toString().padStart(2, '0')}</div>
+                    <div style="font-size: 24px;">Final WPM: ${wpm}</div>
+                    <div style="font-size: 24px;">Accuracy: ${accuracy}%</div>
+                </div>
+            `;
+            document.getElementById('inputBox').disabled = true;
+
+            let completionMsg = 'Great job! ';
+            if (gameState.mode === 'lesson') {
+                completionMsg += `You completed Lesson ${gameState.currentLesson}!`;
+            } else {
+                completionMsg += 'You finished the challenge!';
+            }
+
+            document.getElementById('message').textContent = completionMsg;
+            document.getElementById('message').style.color = '#FFD700';
+        }
+
+        document.getElementById('inputBox').addEventListener('input', function(e) {
+            if (!gameState.isPlaying) return;
+
+            gameState.currentInput = e.target.value.toLowerCase();
+
+            // Update statistics for each character typed
+            const lastCharIndex = gameState.currentInput.length - 1;
+            if (lastCharIndex >= 0 && lastCharIndex < gameState.currentWord.length) {
+                if (gameState.currentInput[lastCharIndex] === gameState.currentWord[lastCharIndex]) {
+                    gameState.correctChars++;
+                } else {
+                    // Play error sound when incorrect letter is typed
+                    playErrorSound();
+                }
+                gameState.totalChars++;
+            }
+
+            updateWordDisplay();
+            updateStats();
+
+            // Check if word is complete
+            if (gameState.currentInput.length === gameState.currentWord.length) {
+                checkWord();
+            }
+
+            // Prevent typing beyond word length
+            if (gameState.currentInput.length > gameState.currentWord.length) {
+                e.target.value = gameState.currentInput.substring(0, gameState.currentWord.length);
+                gameState.currentInput = e.target.value;
+            }
+        });
+
+        // Prevent spacebar from scrolling the page (but allow it in input boxes)
+        document.addEventListener('keydown', function(e) {
+            if (e.key === ' ' && e.target.tagName !== 'INPUT') {
+                e.preventDefault();
+            }
+        });
+
+        // Toggle keyboard visibility for free play and lessons
+        function toggleKeyboard() {
+            const keyboard = document.getElementById('keyboard');
+            const toggleText = document.getElementById('keyboardToggleText');
+
+            if (keyboard.style.display === 'none') {
+                keyboard.style.display = 'block';
+                toggleText.textContent = 'Hide Keyboard';
+            } else {
+                keyboard.style.display = 'none';
+                toggleText.textContent = 'Show Keyboard';
+            }
+        }
+
+        // Toggle keyboard visibility for Falling Words game
+        function toggleFallingKeyboard() {
+            const keyboard = document.getElementById('miniKeyboard');
+            const toggleText = document.getElementById('fallingKeyboardToggleText');
+
+            if (keyboard.style.display === 'none') {
+                keyboard.style.display = 'block';
+                toggleText.textContent = 'Hide Keyboard';
+            } else {
+                keyboard.style.display = 'none';
+                toggleText.textContent = 'Show Keyboard';
+            }
+        }
+
+        // Toggle keyboard visibility for Platformer game
+        function togglePlatformKeyboard() {
+            const keyboard = document.getElementById('platformKeyboard');
+            const toggleText = document.getElementById('platformKeyboardToggleText');
+
+            if (keyboard.style.display === 'none') {
+                keyboard.style.display = 'block';
+                toggleText.textContent = 'Hide Keyboard';
+            } else {
+                keyboard.style.display = 'none';
+                toggleText.textContent = 'Show Keyboard';
+            }
+        }
+
+        // FALLING WORDS GAME
+        let fallingGame = {
+            canvas: null,
+            ctx: null,
+            words: [],
+            score: 0,
+            lives: 5,
+            level: 1,
+            isPlaying: false,
+            animationId: null,
+            spawnInterval: null,
+            currentInput: '',
+            difficulty: 1,
+            wordsTyped: 0,
+            startTime: null,
+            usedWords: [],
+            availableWords: []
+        };
+
+        const gameWords = [
+            'cat', 'dog', 'run', 'jump', 'play', 'fun', 'sun', 'moon', 'star', 'tree',
+            'fish', 'bird', 'rain', 'snow', 'wind', 'fire', 'water', 'earth', 'sky', 'cloud',
+            'house', 'car', 'bike', 'road', 'book', 'pen', 'desk', 'chair', 'lamp', 'door',
+            'window', 'wall', 'apple', 'orange', 'grape', 'banana', 'pizza', 'cake', 'cookie', 'happy',
+            'smile', 'laugh', 'dance', 'sing', 'music', 'game', 'toy', 'robot', 'alien', 'space',
+            'rocket', 'planet', 'orbit', 'comet', 'meteor', 'galaxy', 'cosmos', 'voyage', 'explore', 'discover',
+            'ocean', 'river', 'lake', 'stream', 'pond', 'beach', 'island', 'reef', 'wave', 'tide',
+            'forest', 'jungle', 'desert', 'valley', 'canyon', 'mountain', 'hill', 'cliff', 'cave', 'meadow',
+            'lion', 'tiger', 'bear', 'wolf', 'fox', 'deer', 'rabbit', 'squirrel', 'mouse', 'hamster',
+            'eagle', 'hawk', 'owl', 'parrot', 'crow', 'dove', 'swan', 'duck', 'goose', 'penguin',
+            'dolphin', 'whale', 'shark', 'octopus', 'jellyfish', 'starfish', 'crab', 'lobster', 'shrimp', 'seahorse',
+            'butterfly', 'bee', 'ant', 'spider', 'beetle', 'cricket', 'firefly', 'dragonfly', 'ladybug', 'moth',
+            'guitar', 'piano', 'drums', 'violin', 'flute', 'trumpet', 'harp', 'cello', 'banjo', 'accordion',
+            'soccer', 'tennis', 'hockey', 'rugby', 'cricket', 'baseball', 'volleyball', 'badminton', 'golf', 'bowling',
+            'red', 'blue', 'green', 'yellow', 'orange', 'purple', 'pink', 'black', 'white', 'brown',
+            'circle', 'square', 'triangle', 'rectangle', 'oval', 'diamond', 'hexagon', 'pentagon', 'octagon', 'sphere',
+            'spring', 'summer', 'autumn', 'winter', 'season', 'weather', 'climate', 'temperature', 'forecast', 'sunshine',
+            'computer', 'laptop', 'tablet', 'phone', 'keyboard', 'mouse', 'screen', 'printer', 'scanner', 'router',
+            'bread', 'butter', 'cheese', 'milk', 'yogurt', 'eggs', 'bacon', 'chicken', 'beef', 'pork',
+            'carrot', 'potato', 'tomato', 'onion', 'garlic', 'pepper', 'lettuce', 'spinach', 'broccoli', 'cucumber',
+            'school', 'teacher', 'student', 'lesson', 'homework', 'pencil', 'eraser', 'ruler', 'notebook', 'backpack',
+            'doctor', 'nurse', 'hospital', 'medicine', 'bandage', 'patient', 'surgery', 'clinic', 'health', 'wellness',
+            'city', 'town', 'village', 'country', 'nation', 'state', 'province', 'capital', 'border', 'region',
+            'train', 'plane', 'boat', 'ship', 'bus', 'truck', 'van', 'taxi', 'subway', 'helicopter',
+            'happy birthday to you', 'the cat sat on mat', 'type fast and accurate', 'practice every day', 'keep trying harder',
+            'never stop learning new things', 'work smart not just hard', 'believe you can do it', 'stay focused on goals', 'make every day count',
+            'reading opens your mind', 'music soothes the soul', 'nature is so beautiful', 'friends are like family', 'kindness costs nothing',
+            'dream big achieve more', 'success takes hard work', 'patience is a virtue', 'honesty is best policy', 'respect everyone around you'
+        ];
+
+        function startFallingWords() {
+            document.getElementById('miniGamesScreen').classList.add('hidden');
+            document.getElementById('fallingWordsGame').classList.remove('hidden');
+
+            fallingGame.canvas = document.getElementById('fallingCanvas');
+            fallingGame.ctx = fallingGame.canvas.getContext('2d');
+            fallingGame.words = [];
+            fallingGame.score = 0;
+            fallingGame.lives = 5;
+            fallingGame.level = 1;
+            fallingGame.isPlaying = true;
+            fallingGame.currentInput = '';
+            fallingGame.difficulty = 1;
+            fallingGame.wordsTyped = 0;
+            fallingGame.startTime = Date.now();
+            fallingGame.usedWords = [];
+            fallingGame.availableWords = [...gameWords];
+
+            updateGameDisplay();
+
+            document.getElementById('gameInput').value = '';
+            document.getElementById('gameInput').focus();
+
+            // Spawn words periodically
+            fallingGame.spawnInterval = setInterval(spawnWord, 2000);
+
+            // Start game loop
+            gameLoop();
+        }
+
+        function spawnWord() {
+            if (!fallingGame.isPlaying) return;
+
+            // If all words have been used, reset the available words
+            if (fallingGame.availableWords.length === 0) {
+                fallingGame.availableWords = [...gameWords];
+                fallingGame.usedWords = [];
+            }
+
+            // Pick a random word from available words
+            const randomIndex = Math.floor(Math.random() * fallingGame.availableWords.length);
+            const word = fallingGame.availableWords[randomIndex];
+
+            // Remove the word from available and add to used
+            fallingGame.availableWords.splice(randomIndex, 1);
+            fallingGame.usedWords.push(word);
+
+            const x = Math.random() * (fallingGame.canvas.width - 100) + 50;
+
+            fallingGame.words.push({
+                text: word,
+                x: x,
+                y: 0,
+                speed: 0.25 + (fallingGame.level * 0.1),
+                matched: false
+            });
+        }
+
+        function gameLoop() {
+            if (!fallingGame.isPlaying) return;
+
+            // Clear canvas
+            fallingGame.ctx.clearRect(0, 0, fallingGame.canvas.width, fallingGame.canvas.height);
+
+            // Update and draw words
+            for (let i = fallingGame.words.length - 1; i >= 0; i--) {
+                const word = fallingGame.words[i];
+
+                // Move word down
+                word.y += word.speed;
+
+                // Check if word reached bottom
+                if (word.y > fallingGame.canvas.height) {
+                    fallingGame.words.splice(i, 1);
+                    fallingGame.lives--;
+                    playErrorSound();
+
+                    // Clear the current input if the fallen word matches what was being typed
+                    if (word.text.startsWith(fallingGame.currentInput) && fallingGame.currentInput.length > 0) {
+                        fallingGame.currentInput = '';
+                        document.getElementById('gameInput').value = '';
+                    }
+
+                    updateGameDisplay();
+
+                    if (fallingGame.lives <= 0) {
+                        endFallingGame();
+                        return;
+                    }
+                    continue;
+                }
+
+                // Draw word
+                fallingGame.ctx.font = '24px Arial';
+                fallingGame.ctx.textAlign = 'center';
+
+                // Highlight if currently typing this word
+                if (word.text.startsWith(fallingGame.currentInput) && fallingGame.currentInput.length > 0) {
+                    fallingGame.ctx.fillStyle = '#FFD700';
+                    fallingGame.ctx.fillRect(word.x - 60, word.y - 30, 120, 40);
+                }
+
+                // Draw the word
+                fallingGame.ctx.fillStyle = '#FFF';
+                fallingGame.ctx.fillText(word.text, word.x, word.y);
+            }
+
+            // Update WPM display
+            const timeElapsed = (Date.now() - fallingGame.startTime) / 1000 / 60;
+            const wpm = timeElapsed > 0 ? Math.round(fallingGame.wordsTyped / timeElapsed) : 0;
+            document.getElementById('gameWPM').textContent = wpm;
+
+            fallingGame.animationId = requestAnimationFrame(gameLoop);
+        }
+
+        function updateGameDisplay() {
+            document.getElementById('gameScore').textContent = fallingGame.score;
+            document.getElementById('gameLives').textContent = fallingGame.lives;
+            document.getElementById('gameLevel').textContent = fallingGame.level;
+
+            // Calculate WPM
+            const timeElapsed = (Date.now() - fallingGame.startTime) / 1000 / 60; // minutes
+            const wpm = timeElapsed > 0 ? Math.round(fallingGame.wordsTyped / timeElapsed) : 0;
+            document.getElementById('gameWPM').textContent = wpm;
+        }
+
+        function checkTypedWord() {
+            const input = fallingGame.currentInput.toLowerCase();
+
+            // Find matching word
+            for (let i = 0; i < fallingGame.words.length; i++) {
+                if (fallingGame.words[i].text === input) {
+                    // Word matched!
+                    const matchedText = fallingGame.words[i].text;
+                    fallingGame.words.splice(i, 1);
+
+                    // Count actual words (space-separated) in the matched text
+                    const actualWordCount = matchedText.trim().split(/\s+/).length;
+                    fallingGame.score += actualWordCount * 10;
+                    fallingGame.wordsTyped += actualWordCount;
+                    fallingGame.currentInput = '';
+                    document.getElementById('gameInput').value = '';
+
+                    updateGameDisplay();
+
+                    // Level up every 50 points
+                    if (fallingGame.score % 50 === 0) {
+                        fallingGame.level++;
+                        updateGameDisplay();
+                    }
+
+                    return;
+                }
+            }
+        }
+
+        function endFallingGame() {
+            fallingGame.isPlaying = false;
+
+            if (fallingGame.spawnInterval) {
+                clearInterval(fallingGame.spawnInterval);
+            }
+
+            if (fallingGame.animationId) {
+                cancelAnimationFrame(fallingGame.animationId);
+            }
+
+            playRingingSound();
+
+            // Calculate WPM for falling game
+            const timeElapsed = (Date.now() - fallingGame.startTime) / 1000 / 60;
+            const wpm = timeElapsed > 0 ? Math.round(fallingGame.wordsTyped / timeElapsed) : 0;
+
+            // Star rating based on score and WPM
+            let stars = 0;
+
+            // Score-based stars (up to 3)
+            if (fallingGame.score >= 200) stars += 3;
+            else if (fallingGame.score >= 100) stars += 2;
+            else if (fallingGame.score >= 50) stars += 1;
+
+            // WPM-based stars (up to 2)
+            if (wpm >= 40) stars += 2;
+            else if (wpm >= 25) stars += 1;
+
+            stars = Math.min(5, stars);
+            const starDisplay = getStarDisplay(stars);
+
+            fallingGame.ctx.fillStyle = 'rgba(0,0,0,0.8)';
+            fallingGame.ctx.fillRect(0, 0, fallingGame.canvas.width, fallingGame.canvas.height);
+
+            fallingGame.ctx.fillStyle = '#FFF';
+            fallingGame.ctx.font = '48px Arial';
+            fallingGame.ctx.textAlign = 'center';
+            fallingGame.ctx.fillText('GAME OVER', fallingGame.canvas.width / 2, fallingGame.canvas.height / 2 - 80);
+
+            fallingGame.ctx.fillStyle = '#FFD700';
+            fallingGame.ctx.font = '60px Arial';
+            fallingGame.ctx.fillText(starDisplay, fallingGame.canvas.width / 2, fallingGame.canvas.height / 2 - 10);
+
+            fallingGame.ctx.fillStyle = '#FFF';
+            fallingGame.ctx.font = '28px Arial';
+            fallingGame.ctx.fillText(`Final Score: ${fallingGame.score}`, fallingGame.canvas.width / 2, fallingGame.canvas.height / 2 + 50);
+            fallingGame.ctx.fillText(`Level Reached: ${fallingGame.level}`, fallingGame.canvas.width / 2, fallingGame.canvas.height / 2 + 85);
+            fallingGame.ctx.fillText(`WPM: ${wpm}`, fallingGame.canvas.width / 2, fallingGame.canvas.height / 2 + 120);
+
+            document.getElementById('gameMessage').textContent = 'Great effort! Click Back to Menu to try again.';
+            document.getElementById('gameMessage').style.color = '#FFD700';
+            document.getElementById('gameInput').disabled = true;
+        }
+
+        function restartFallingWords() {
+            if (fallingGame.spawnInterval) {
+                clearInterval(fallingGame.spawnInterval);
+            }
+
+            if (fallingGame.animationId) {
+                cancelAnimationFrame(fallingGame.animationId);
+            }
+
+            fallingGame.isPlaying = false;
+
+            document.getElementById('fallingWordsGame').classList.add('hidden');
+            document.getElementById('menuScreen').classList.remove('hidden');
+            document.getElementById('gameMessage').textContent = '';
+            document.getElementById('gameInput').value = '';
+            document.getElementById('gameInput').disabled = false;
+        }
+
+        function restartFallingWordsGame() {
+            if (fallingGame.spawnInterval) {
+                clearInterval(fallingGame.spawnInterval);
+            }
+
+            if (fallingGame.animationId) {
+                cancelAnimationFrame(fallingGame.animationId);
+            }
+
+            fallingGame.isPlaying = false;
+            document.getElementById('gameMessage').textContent = '';
+            document.getElementById('gameInput').value = '';
+            document.getElementById('gameInput').disabled = false;
+
+            // Restart the game
+            startFallingWords();
+        }
+
+        function highlightMiniKey(char) {
+            // Remove all highlights
+            document.querySelectorAll('.mini-key').forEach(key => {
+                key.classList.remove('highlight');
+            });
+            document.querySelectorAll('.mini-finger').forEach(finger => {
+                finger.classList.remove('active');
+            });
+
+            const searchChar = char === ' ' ? ' ' : char.toLowerCase();
+            const key = document.querySelector(`.mini-key[data-mini-key="${searchChar}"]`);
+            if (key) {
+                key.classList.add('highlight');
+
+                // Highlight the corresponding finger (space bar uses thumbs, but we won't highlight for space)
+                if (char !== ' ') {
+                    const fingerClasses = ['left-pinky', 'left-ring', 'left-middle', 'left-index',
+                                          'right-index', 'right-middle', 'right-ring', 'right-pinky'];
+
+                    for (let fingerClass of fingerClasses) {
+                        if (key.classList.contains(fingerClass)) {
+                            const finger = document.querySelector(`.mini-finger[data-mini-finger="${fingerClass}"]`);
+                            if (finger) {
+                                finger.classList.add('active');
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        function highlightPlatformKey(char) {
+            // Remove all highlights
+            document.querySelectorAll('.platform-mini-key').forEach(key => {
+                key.classList.remove('highlight');
+            });
+            document.querySelectorAll('.platform-mini-finger').forEach(finger => {
+                finger.classList.remove('active');
+            });
+
+            const searchChar = char === ' ' ? ' ' : char.toLowerCase();
+            const key = document.querySelector(`.platform-mini-key[data-platform-key="${searchChar}"]`);
+            if (key) {
+                key.classList.add('highlight');
+
+                // Highlight the corresponding finger (space bar uses thumbs, but we won't highlight for space)
+                if (char !== ' ') {
+                    const fingerClasses = ['left-pinky', 'left-ring', 'left-middle', 'left-index',
+                                          'right-index', 'right-middle', 'right-ring', 'right-pinky'];
+
+                    for (let fingerClass of fingerClasses) {
+                        if (key.classList.contains(fingerClass)) {
+                            const finger = document.querySelector(`.platform-mini-finger[data-platform-finger="${fingerClass}"]`);
+                            if (finger) {
+                                finger.classList.add('active');
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Handle input for falling words game
+        document.getElementById('gameInput').addEventListener('input', function(e) {
+            if (!fallingGame.isPlaying) return;
+
+            fallingGame.currentInput = e.target.value.toLowerCase();
+
+            // Highlight next letter to type
+            if (fallingGame.currentInput.length > 0) {
+                const nextChar = fallingGame.currentInput[fallingGame.currentInput.length - 1];
+                highlightMiniKey(nextChar);
+            }
+
+            checkTypedWord();
+        });
+
+        // PLATFORMER GAME
+        let platformerGame = {
+            canvas: null,
+            ctx: null,
+            player: null,
+            platforms: [],
+            score: 0,
+            level: 1,
+            isPlaying: false,
+            animationId: null,
+            currentLetter: '',
+            nextLetter: '',
+            isJumping: false,
+            targetPlatform: null,
+            lettersTyped: 0,
+            startTime: null,
+            targetX: 0,
+            correctKeys: 0,
+            totalKeys: 0
+        };
+
+        const allLetters = 'abcdefghijklmnopqrstuvwxyz '.split('');
+
+        function startPlatformer() {
+            document.getElementById('miniGamesScreen').classList.add('hidden');
+            document.getElementById('platformerGame').classList.remove('hidden');
+
+            platformerGame.canvas = document.getElementById('platformCanvas');
+            platformerGame.ctx = platformerGame.canvas.getContext('2d');
+            platformerGame.score = 0;
+            platformerGame.level = 1;
+            platformerGame.isPlaying = true;
+            platformerGame.isJumping = false;
+            platformerGame.platforms = [];
+            platformerGame.lettersTyped = 0;
+            platformerGame.startTime = Date.now();
+            platformerGame.correctKeys = 0;
+            platformerGame.totalKeys = 0;
+
+            // Create player - SMALLER AND FASTER
+            platformerGame.player = {
+                x: 50,
+                y: 300,
+                width: 25, // Smaller player
+                height: 25,
+                velocityY: 0,
+                velocityX: 0,
+                gravity: 1.0, // VERY strong gravity for super fast falls
+                jumpPower: -14, // Higher jump but faster fall
+                currentPlatformIndex: 0
+            };
+            platformerGame.targetX = 50;
+
+            // Create initial platforms
+            createPlatforms();
+
+            updatePlatformerDisplay();
+            platformerLoop();
+        }
+
+        function createPlatforms() {
+            platformerGame.platforms = [];
+
+            // Starting platform
+            platformerGame.platforms.push({
+                x: 30,
+                y: 340,
+                width: 60,
+                height: 10,
+                letter: '',
+                isStart: true
+            });
+
+            // Create 5 platforms ahead - EXTREME DIFFICULTY
+            for (let i = 1; i <= 5; i++) {
+                const letter = allLetters[Math.floor(Math.random() * allLetters.length)];
+                const moveDirection = Math.random() > 0.5 ? 1 : -1;
+                const baseSpeed = 1.8 + Math.random() * 1.5; // SUPER FAST movement
+                platformerGame.platforms.push({
+                    x: 30 + (i * 150),
+                    y: 160 + Math.random() * 140,
+                    width: 45, // TINY platforms
+                    height: 10,
+                    letter: letter,
+                    velocityY: baseSpeed * moveDirection,
+                    baseSpeed: baseSpeed,
+                    minY: 100, // HUGE movement range
+                    maxY: 350
+                });
+            }
+
+            platformerGame.nextLetter = platformerGame.platforms[1].letter;
+            const displayText = platformerGame.nextLetter === ' ' ? 'SPACE' : platformerGame.nextLetter.toUpperCase();
+            document.getElementById('nextLetter').textContent = displayText;
+            highlightPlatformKey(platformerGame.nextLetter);
+        }
+
+        function platformerLoop() {
+            if (!platformerGame.isPlaying) return;
+
+            const ctx = platformerGame.ctx;
+            const canvas = platformerGame.canvas;
+
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Update player physics
+            const player = platformerGame.player;
+            player.velocityY += player.gravity;
+            player.y += player.velocityY;
+
+            // Handle horizontal movement during jump
+            if (player.velocityX > 0) {
+                player.x += player.velocityX;
+
+                // Check if reached target distance
+                if (player.x >= platformerGame.targetX) {
+                    player.x = platformerGame.targetX;
+                    player.velocityX = 0;
+                }
+            }
+
+            // Check if player fell off
+            if (player.y > canvas.height) {
+                endPlatformerGame();
+                return;
+            }
+
+            // Check platform collision - HARD BUT FAIR COLLISION DETECTION
+            let onPlatform = false;
+            for (let i = 0; i < platformerGame.platforms.length; i++) {
+                const platform = platformerGame.platforms[i];
+
+                // Check if player is falling onto platform
+                const playerBottom = player.y + player.height;
+                const playerLeft = player.x;
+                const playerRight = player.x + player.width;
+                const platformLeft = platform.x + 5; // Some margin but reasonable
+                const platformRight = platform.x + platform.width - 5;
+
+                // Must have decent overlap to land
+                const horizontalOverlap = Math.min(playerRight, platformRight) - Math.max(playerLeft, platformLeft);
+
+                if (player.velocityY >= 0 && // falling down
+                    playerBottom >= platform.y &&
+                    playerBottom <= platform.y + platform.height + 5 && // Reasonable vertical tolerance
+                    horizontalOverlap >= 12) { // Need decent overlap but not impossible
+
+                    player.y = platform.y - player.height;
+                    player.velocityY = 0;
+                    player.velocityX = 0;
+                    onPlatform = true;
+                    platformerGame.isJumping = false;
+                    player.currentPlatformIndex = i;
+                    break;
+                }
+            }
+
+            // Update and draw platforms
+            platformerGame.platforms.forEach((platform, index) => {
+                // Move platforms (except starting platform)
+                if (!platform.isStart && platform.velocityY) {
+                    platform.y += platform.velocityY;
+
+                    // Bounce at boundaries
+                    if (platform.y <= platform.minY || platform.y >= platform.maxY) {
+                        platform.velocityY *= -1;
+                    }
+                }
+
+                // Platform with shadow effect for moving platforms
+                if (!platform.isStart && platform.velocityY) {
+                    // Shadow
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                    ctx.fillRect(platform.x + 3, platform.y + 3, platform.width, platform.height);
+                }
+
+                // Platform
+                ctx.fillStyle = platform.isStart ? '#4ECDC4' : '#FFF';
+                ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+
+                // Moving platform indicator (subtle pulse effect)
+                if (!platform.isStart && platform.velocityY) {
+                    ctx.strokeStyle = 'rgba(255, 215, 0, 0.5)';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
+                }
+
+                // Letter
+                if (platform.letter) {
+                    ctx.fillStyle = '#000';
+                    ctx.font = 'bold 24px Arial';
+                    ctx.textAlign = 'center';
+                    const displayLetter = platform.letter === ' ' ? '_' : platform.letter.toUpperCase();
+                    ctx.fillText(displayLetter, platform.x + platform.width / 2, platform.y - 10);
+                }
+            });
+
+            // Draw player
+            ctx.fillStyle = '#FFD700';
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+
+            // Draw player face
+            ctx.fillStyle = '#000';
+            ctx.fillRect(player.x + 8, player.y + 10, 4, 4); // left eye
+            ctx.fillRect(player.x + 18, player.y + 10, 4, 4); // right eye
+            ctx.fillRect(player.x + 10, player.y + 20, 10, 2); // smile
+
+            // Update WPM display
+            updatePlatformerDisplay();
+
+            platformerGame.animationId = requestAnimationFrame(platformerLoop);
+        }
+
+        function jumpToNextPlatform() {
+            if (platformerGame.isJumping) return;
+
+            const player = platformerGame.player;
+            const nextIndex = player.currentPlatformIndex + 1;
+
+            if (nextIndex >= platformerGame.platforms.length) return;
+
+            // Update score immediately
+            platformerGame.score += 10;
+            platformerGame.lettersTyped++;
+
+            // Level up every 50 points
+            if (platformerGame.score % 50 === 0) {
+                platformerGame.level++;
+            }
+
+            // Start jump with fixed distance
+            platformerGame.isJumping = true;
+            player.velocityY = player.jumpPower;
+
+            // Fixed horizontal velocity - player moves exactly 150 pixels horizontally (SUPER FAST)
+            player.velocityX = 10; // VERY fast horizontal movement - less time to adjust
+            platformerGame.targetX = player.x + 150;
+
+            // Add new platform if needed
+            let nextNextIndex;
+            if (nextIndex >= 2) {
+                // Remove old platforms
+                platformerGame.platforms.shift();
+                player.currentPlatformIndex--;
+
+                // Shift all platforms left
+                platformerGame.platforms.forEach(p => {
+                    p.x -= 150;
+                });
+                player.x -= 150;
+                platformerGame.targetX -= 150;
+
+                // Add new platform on the right - EXTREME DIFFICULTY
+                const letter = allLetters[Math.floor(Math.random() * allLetters.length)];
+                const moveDirection = Math.random() > 0.5 ? 1 : -1;
+                const baseSpeed = 1.8 + Math.random() * 1.5 + (platformerGame.level * 0.15); // Gets INSANELY fast
+                platformerGame.platforms.push({
+                    x: platformerGame.platforms[platformerGame.platforms.length - 1].x + 150,
+                    y: 160 + Math.random() * 140,
+                    width: 45, // TINY platforms
+                    height: 10,
+                    letter: letter,
+                    velocityY: baseSpeed * moveDirection,
+                    baseSpeed: baseSpeed,
+                    minY: 100, // HUGE movement range
+                    maxY: 350
+                });
+
+                // After shift, the next platform is at nextIndex
+                nextNextIndex = nextIndex;
+            } else {
+                // No shift, next platform is at nextIndex + 1
+                nextNextIndex = nextIndex + 1;
+            }
+
+            // Update next letter
+            if (nextNextIndex < platformerGame.platforms.length) {
+                platformerGame.nextLetter = platformerGame.platforms[nextNextIndex].letter;
+                const displayText = platformerGame.nextLetter === ' ' ? 'SPACE' : platformerGame.nextLetter.toUpperCase();
+                document.getElementById('nextLetter').textContent = displayText;
+                highlightPlatformKey(platformerGame.nextLetter);
+            }
+        }
+
+        function updatePlatformerDisplay() {
+            document.getElementById('platformScore').textContent = platformerGame.score;
+            document.getElementById('platformLevel').textContent = platformerGame.level;
+
+            // Calculate WPM (letters per minute / 5 = words per minute, assuming 5 letters per word)
+            const timeElapsed = (Date.now() - platformerGame.startTime) / 1000 / 60; // minutes
+            const wpm = timeElapsed > 0 ? Math.round((platformerGame.lettersTyped / 5) / timeElapsed) : 0;
+            document.getElementById('platformWPM').textContent = wpm;
+
+            // Calculate accuracy
+            const accuracy = platformerGame.totalKeys === 0 ? 100 : Math.round((platformerGame.correctKeys / platformerGame.totalKeys) * 100);
+            document.getElementById('platformAccuracy').textContent = accuracy + '%';
+
+            // Change color based on accuracy
+            const accuracyElement = document.getElementById('platformAccuracy');
+            if (accuracy < 85) {
+                accuracyElement.style.color = '#FF6B6B';
+            } else if (accuracy < 90) {
+                accuracyElement.style.color = '#FFD700';
+            } else {
+                accuracyElement.style.color = 'white';
+            }
+
+            return accuracy;
+        }
+
+        function endPlatformerGame(reason) {
+            platformerGame.isPlaying = false;
+
+            if (platformerGame.animationId) {
+                cancelAnimationFrame(platformerGame.animationId);
+            }
+
+            playRingingSound();
+
+            platformerGame.ctx.fillStyle = 'rgba(0,0,0,0.8)';
+            platformerGame.ctx.fillRect(0, 0, platformerGame.canvas.width, platformerGame.canvas.height);
+
+            platformerGame.ctx.fillStyle = '#FFF';
+            platformerGame.ctx.font = '48px Arial';
+            platformerGame.ctx.textAlign = 'center';
+            platformerGame.ctx.fillText('GAME OVER', platformerGame.canvas.width / 2, platformerGame.canvas.height / 2 - 100);
+
+            platformerGame.ctx.font = '24px Arial';
+            const accuracy = platformerGame.totalKeys === 0 ? 100 : Math.round((platformerGame.correctKeys / platformerGame.totalKeys) * 100);
+
+            // Calculate WPM for platformer
+            const timeElapsed = (Date.now() - platformerGame.startTime) / 1000 / 60;
+            const wpm = timeElapsed > 0 ? Math.round((platformerGame.lettersTyped / 5) / timeElapsed) : 0;
+
+            // Calculate stars based on score, accuracy, and WPM
+            let stars = 0;
+
+            // Score-based stars (up to 2)
+            if (platformerGame.score >= 200) stars += 2;
+            else if (platformerGame.score >= 100) stars += 1;
+
+            // Accuracy-based stars (up to 2)
+            if (accuracy >= 95) stars += 2;
+            else if (accuracy >= 85) stars += 1;
+
+            // WPM-based stars (up to 1)
+            if (wpm >= 40) stars += 1;
+
+            stars = Math.min(5, stars);
+            const starDisplay = getStarDisplay(stars);
+
+            platformerGame.ctx.fillStyle = '#FFD700';
+            platformerGame.ctx.font = '60px Arial';
+            platformerGame.ctx.fillText(starDisplay, platformerGame.canvas.width / 2, platformerGame.canvas.height / 2 - 30);
+
+            if (reason === 'LOW_ACCURACY') {
+                platformerGame.ctx.fillStyle = '#FF6B6B';
+                platformerGame.ctx.font = '20px Arial';
+                platformerGame.ctx.fillText('Accuracy dropped below 85%!', platformerGame.canvas.width / 2, platformerGame.canvas.height / 2 + 30);
+            } else if (reason === 'LOW_WPM') {
+                platformerGame.ctx.fillStyle = '#FF6B6B';
+                platformerGame.ctx.font = '20px Arial';
+                platformerGame.ctx.fillText('WPM dropped to 5 or below!', platformerGame.canvas.width / 2, platformerGame.canvas.height / 2 + 30);
+            }
+
+            platformerGame.ctx.fillStyle = '#FFF';
+            platformerGame.ctx.font = '24px Arial';
+            platformerGame.ctx.fillText(`Final Score: ${platformerGame.score}`, platformerGame.canvas.width / 2, platformerGame.canvas.height / 2 + 65);
+            platformerGame.ctx.fillText(`Accuracy: ${accuracy}%`, platformerGame.canvas.width / 2, platformerGame.canvas.height / 2 + 95);
+            platformerGame.ctx.fillText(`Level Reached: ${platformerGame.level}`, platformerGame.canvas.width / 2, platformerGame.canvas.height / 2 + 125);
+
+            if (reason === 'LOW_ACCURACY') {
+                document.getElementById('platformMessage').textContent = 'Focus on accuracy! Try to press the correct keys.';
+                document.getElementById('platformMessage').style.color = '#FF6B6B';
+            } else {
+                document.getElementById('platformMessage').textContent = 'Great jumping! Try again to beat your score.';
+                document.getElementById('platformMessage').style.color = '#FFD700';
+            }
+        }
+
+        function restartPlatformer() {
+            if (platformerGame.animationId) {
+                cancelAnimationFrame(platformerGame.animationId);
+            }
+
+            platformerGame.isPlaying = false;
+
+            document.getElementById('platformerGame').classList.add('hidden');
+            document.getElementById('menuScreen').classList.remove('hidden');
+            document.getElementById('platformMessage').textContent = '';
+        }
+
+        function restartPlatformerGame() {
+            if (platformerGame.animationId) {
+                cancelAnimationFrame(platformerGame.animationId);
+            }
+
+            platformerGame.isPlaying = false;
+            document.getElementById('platformMessage').textContent = '';
+
+            // Restart the game
+            startPlatformer();
+        }
+
+        // Handle keyboard input for platformer
+        document.addEventListener('keydown', function(e) {
+            if (!platformerGame.isPlaying) return;
+
+            const key = e.key.toLowerCase();
+
+            // Check if it's a letter or space
+            if (/^[a-z]$/.test(key) || key === ' ') {
+                // Prevent space from scrolling the page
+                if (key === ' ') {
+                    e.preventDefault();
+                }
+
+                platformerGame.totalKeys++;
+
+                if (key === platformerGame.nextLetter) {
+                    platformerGame.correctKeys++;
+                    jumpToNextPlatform();
+                } else {
+                    // Wrong letter
+                    playErrorSound();
+                }
+
+                // Update display and check accuracy
+                const accuracy = updatePlatformerDisplay();
+
+                // End game if accuracy drops below 85% (lowered due to extreme difficulty)
+                if (platformerGame.totalKeys >= 5 && accuracy < 85) {
+                    endPlatformerGame('LOW_ACCURACY');
+                }
+
+                // End game if WPM drops to 5 or below
+                const timeElapsed = (Date.now() - platformerGame.startTime) / 1000 / 60;
+                const wpm = timeElapsed > 0 ? Math.round((platformerGame.lettersTyped / 5) / timeElapsed) : 0;
+                if (platformerGame.totalKeys >= 10 && wpm <= 5) {
+                    endPlatformerGame('LOW_WPM');
+                }
+            }
+        });
+    </script>
+</body>
+</html>

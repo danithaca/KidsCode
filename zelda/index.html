@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zelda Adventure</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <div class="hud">
+            <div class="level">
+                <span>🏆 Level: <span id="level">1</span></span>
+            </div>
+            <div class="lives">
+                <span>👤 Lives: <span id="lives">10</span></span>
+            </div>
+            <div class="health">
+                <span>❤️ Health: <span id="health">100</span></span>
+            </div>
+            <div class="score">
+                <span>⭐ Score: <span id="score">0</span></span>
+            </div>
+            <div class="coins">
+                <span>🪙 Coins: <span id="coins">0</span></span>
+            </div>
+            <div class="bombs" id="bombDisplay" style="display: none;">
+                <span>💣 Bombs: <span id="bombs">0</span></span>
+            </div>
+        </div>
+        <canvas id="gameCanvas"></canvas>
+        <div class="controls">
+            <p><strong>Controls:</strong></p>
+            <p>Arrow Keys: Move & DOUBLE JUMP!</p>
+            <p>Space Bar: Attack (BIGGER HITBOX!)</p>
+            <p>F: Drop Bomb (Unlocks after Level 2!)</p>
+            <p>Collect 1-UPs for +2 Lives! | Beat 26 levels!</p>
+        </div>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html>
